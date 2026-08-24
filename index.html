@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype App - Inicio de Sesión & Chat</title>
+  <title>Hype App - Chat & Perfil</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -13,8 +13,11 @@
   <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
     <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE</h1>
     <div id="user-bar" class="hidden flex items-center gap-3">
-      <span id="user-display" class="text-xs text-slate-300 font-medium"></span>
-      <button id="logout-btn" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded-lg font-bold transition-all">Cerrar Sesión</button>
+      <button id="open-profile-btn" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-700 transition-all">
+        <img id="nav-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-6 h-6 rounded-full object-cover" alt="Avatar">
+        <span id="user-display" class="text-xs font-medium text-slate-200"></span>
+      </button>
+      <button id="logout-btn" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1.5 rounded-xl font-bold transition-all">Salir</button>
     </div>
   </header>
 
@@ -24,7 +27,6 @@
       <h2 class="text-xl font-bold text-white">Entrar a Hype</h2>
       <p class="text-xs text-slate-400">Regístrate o inicia sesión con tu cuenta</p>
 
-      <!-- Botón Google -->
       <button id="google-login-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-all">
         <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1H12v3.7h5.35c-.23 1.22-1.33 3.5-5.35 3.5c-3.22 0-5.85-2.67-5.85-5.95s2.63-5.95 5.85-5.95c1.83 0 3.06.78 3.76 1.45l2.9-2.82C18.8 3.38 15.7 2 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.77 0 9.6-4.06 9.6-9.77c0-.66-.07-1.13-.25-1.13z"/></svg>
         Continuar con Google
@@ -36,7 +38,6 @@
         <div class="flex-1 h-px bg-slate-800"></div>
       </div>
 
-      <!-- Formulario Correo -->
       <form id="email-auth-form" class="space-y-3 text-left">
         <div>
           <label class="text-[10px] text-slate-400 uppercase font-bold">Correo Electrónico</label>
@@ -62,8 +63,51 @@
 
     <form id="chat-form" class="p-4 bg-slate-900 border-t border-slate-800 flex gap-2">
       <input id="message-input" type="text" placeholder="Escribe un mensaje en #general..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 text-white" required />
-      <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm">Enviar</button>
+      <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">Enviar</button>
     </form>
+  </div>
+
+  <!-- MODAL: EDITAR PERFIL -->
+  <div id="profile-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="text-lg font-bold text-white">Editar Perfil</h3>
+        <button id="close-profile-btn" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
+      </div>
+
+      <form id="profile-form" class="space-y-3">
+        <div class="flex items-center gap-4">
+          <img id="profile-preview-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-16 h-16 rounded-full object-cover border-2 border-cyan-500">
+          <div class="flex-1">
+            <label class="text-[10px] text-slate-400 uppercase font-bold">URL Foto de Perfil</label>
+            <input id="profile-avatar-url" type="url" placeholder="https://ejemplo.com/foto.jpg" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 mt-1">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold">Nombre Visible</label>
+          <input id="profile-username" type="text" required placeholder="Tu Nombre" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold">Usuario (@arroba)</label>
+          <div class="relative mt-1">
+            <span class="absolute left-3 top-2 text-slate-500 text-sm">@</span>
+            <input id="profile-handle" type="text" required placeholder="usuario" class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold">Descripción / Biografía</label>
+          <textarea id="profile-bio" rows="2" placeholder="Escribe algo sobre ti..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1 resize-none"></textarea>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button type="button" id="cancel-profile-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -73,22 +117,76 @@
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
+    let currentProfile = null;
 
-    // Elementos DOM
+    // DOM Elements
     const authScreen = document.getElementById('auth-screen');
     const chatScreen = document.getElementById('chat-screen');
     const userBar = document.getElementById('user-bar');
     const userDisplay = document.getElementById('user-display');
+    const navAvatar = document.getElementById('nav-avatar');
     const logoutBtn = document.getElementById('logout-btn');
+
+    const profileModal = document.getElementById('profile-modal');
+    const openProfileBtn = document.getElementById('open-profile-btn');
+    const closeProfileBtn = document.getElementById('close-profile-btn');
+    const cancelProfileBtn = document.getElementById('cancel-profile-btn');
+    const profileForm = document.getElementById('profile-form');
+
+    const profileAvatarUrlInput = document.getElementById('profile-avatar-url');
+    const profilePreviewAvatar = document.getElementById('profile-preview-avatar');
+    const profileUsernameInput = document.getElementById('profile-username');
+    const profileHandleInput = document.getElementById('profile-handle');
+    const profileBioInput = document.getElementById('profile-bio');
 
     // Comprobar Sesión Activa
     async function checkUser() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
         currentUser = session.user;
+        await loadProfile();
         showChatScreen();
       } else {
         showAuthScreen();
+      }
+    }
+
+    async function loadProfile() {
+      if (!currentUser) return;
+
+      let { data, error } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
+      if (!data) {
+        // Crear perfil inicial si no existe
+        const defaultUsername = currentUser.email.split('@')[0];
+        const defaultHandle = defaultUsername.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+        
+        const { data: newProfile } = await supabaseClient
+          .from('profiles')
+          .insert([{
+            id: currentUser.id,
+            email: currentUser.email,
+            username: defaultUsername,
+            handle: defaultHandle,
+            avatar_url: defaultAvatar,
+            bio: '¡Hola! Estoy usando Hype.'
+          }])
+          .select()
+          .single();
+          
+        data = newProfile;
+      }
+
+      currentProfile = data;
+
+      if (currentProfile) {
+        userDisplay.textContent = currentProfile.username || currentUser.email;
+        navAvatar.src = currentProfile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
       }
     }
 
@@ -102,20 +200,68 @@
       authScreen.classList.add('hidden');
       chatScreen.classList.remove('hidden');
       userBar.classList.remove('hidden');
-      userDisplay.textContent = currentUser.email;
       loadMessages();
     }
 
-    // Registro e Inicio de Sesión con Email
+    // Modal Perfil
+    openProfileBtn.addEventListener('click', () => {
+      if (!currentProfile) return;
+      profileAvatarUrlInput.value = currentProfile.avatar_url || '';
+      profilePreviewAvatar.src = currentProfile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+      profileUsernameInput.value = currentProfile.username || '';
+      profileHandleInput.value = currentProfile.handle || '';
+      profileBioInput.value = currentProfile.bio || '';
+      profileModal.classList.remove('hidden');
+    });
+
+    closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
+    cancelProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
+
+    profileAvatarUrlInput.addEventListener('input', (e) => {
+      profilePreviewAvatar.src = e.target.value.trim() || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+    });
+
+    // Guardar Cambios de Perfil
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const avatar_url = profileAvatarUrlInput.value.trim() || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+      const username = profileUsernameInput.value.trim();
+      const handle = profileHandleInput.value.trim().toLowerCase().replace(/\s+/g, '');
+      const bio = profileBioInput.value.trim();
+
+      const { error } = await supabaseClient
+        .from('profiles')
+        .upsert({
+          id: currentUser.id,
+          email: currentUser.email,
+          avatar_url,
+          username,
+          handle,
+          bio,
+          updated_at: new Date()
+        });
+
+      if (error) {
+        alert("Error guardando el perfil: " + error.message);
+      } else {
+        await loadProfile();
+        profileModal.classList.add('hidden');
+        loadMessages(); // Refrescar chat con los nuevos datos
+      }
+    });
+
+    // Autenticación Email
     document.getElementById('email-auth-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
 
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) alert("Error de inicio de sesión: " + error.message);
+      if (error) alert("Error al entrar: " + error.message);
       else {
         currentUser = data.user;
+        await loadProfile();
         showChatScreen();
       }
     });
@@ -123,14 +269,13 @@
     document.getElementById('signup-btn').addEventListener('click', async () => {
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
-      if (!email || !password) return alert("Llena el correo y la contraseña para registrarte.");
+      if (!email || !password) return alert("Ingresa correo y contraseña para registrarte.");
 
       const { data, error } = await supabaseClient.auth.signUp({ email, password });
       if (error) alert("Error al registrarte: " + error.message);
-      else alert("¡Cuenta creada con éxito! Si no entra automático, presiona 'Iniciar Sesión'.");
+      else alert("¡Registro exitoso! Ya puedes iniciar sesión.");
     });
 
-    // Login con Google
     document.getElementById('google-login-btn').addEventListener('click', async () => {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
@@ -139,29 +284,32 @@
       if (error) alert("Error con Google: " + error.message);
     });
 
-    // Cerrar Sesión
     logoutBtn.addEventListener('click', async () => {
       await supabaseClient.auth.signOut();
       currentUser = null;
+      currentProfile = null;
       showAuthScreen();
     });
 
-    // Lógica del Chat
+    // Chat
     const messagesContainer = document.getElementById('messages-container');
 
     function renderMessage(msg) {
       const msgDiv = document.createElement('div');
       msgDiv.className = 'flex gap-3 items-start bg-slate-900 p-3 rounded-xl border border-slate-800';
+      
+      const avatarSrc = msg.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+      const handleDisplay = msg.handle ? `@${msg.handle}` : '';
+
       msgDiv.innerHTML = `
-        <div class="w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-slate-950 text-xs">
-          ${(msg.username || 'U').charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
+        <img src="${avatarSrc}" class="w-9 h-9 rounded-full object-cover border border-slate-700 mt-0.5" alt="Avatar">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
             <span class="font-bold text-xs text-cyan-400">${msg.username || 'Usuario'}</span>
-            <span class="text-[10px] text-slate-500">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            ${handleDisplay ? `<span class="text-[11px] text-slate-500">${handleDisplay}</span>` : ''}
+            <span class="text-[10px] text-slate-600 ml-auto">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
           </div>
-          <p class="text-sm text-slate-200 mt-1">${msg.content}</p>
+          <p class="text-sm text-slate-200 mt-1 break-words">${msg.content}</p>
         </div>
       `;
       messagesContainer.appendChild(msgDiv);
@@ -169,14 +317,49 @@
     }
 
     async function loadMessages() {
-      const { data } = await supabaseClient
+      // Unir tabla messages con profiles para mostrar fotos y handles actualizados
+      const { data, error } = await supabaseClient
         .from('messages')
-        .select('*')
+        .select(`
+          id,
+          content,
+          created_at,
+          username,
+          user_id
+        `)
         .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      // Obtener perfiles de los usuarios
+      const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
+      let profilesMap = {};
+
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabaseClient
+          .from('profiles')
+          .select('id, username, handle, avatar_url')
+          .in('id', userIds);
+
+        (profiles || []).forEach(p => {
+          profilesMap[p.id] = p;
+        });
+      }
 
       messagesContainer.innerHTML = '';
       if (data && data.length > 0) {
-        data.forEach(renderMessage);
+        data.forEach(msg => {
+          const profile = profilesMap[msg.user_id] || {};
+          renderMessage({
+            ...msg,
+            username: profile.username || msg.username,
+            handle: profile.handle,
+            avatar_url: profile.avatar_url
+          });
+        });
       } else {
         messagesContainer.innerHTML = '<div class="text-slate-500 text-center text-xs my-4">No hay mensajes. ¡Escribe algo!</div>';
       }
@@ -184,8 +367,26 @@
 
     supabaseClient
       .channel('public:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-        if (currentUser) renderMessage(payload.new);
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async payload => {
+        if (!currentUser) return;
+        const newMsg = payload.new;
+        
+        let profile = {};
+        if (newMsg.user_id) {
+          const { data } = await supabaseClient
+            .from('profiles')
+            .select('username, handle, avatar_url')
+            .eq('id', newMsg.user_id)
+            .single();
+          if (data) profile = data;
+        }
+
+        renderMessage({
+          ...newMsg,
+          username: profile.username || newMsg.username,
+          handle: profile.handle,
+          avatar_url: profile.avatar_url
+        });
       })
       .subscribe();
 
@@ -195,11 +396,15 @@
       const content = input.value.trim();
       if (!content || !currentUser) return;
 
-      const username = currentUser.email.split('@')[0];
+      const displayUsername = currentProfile?.username || currentUser.email.split('@')[0];
 
       const { error } = await supabaseClient
         .from('messages')
-        .insert([{ content, username, user_id: currentUser.id }]);
+        .insert([{ 
+          content, 
+          username: displayUsername, 
+          user_id: currentUser.id 
+        }]);
 
       if (error) alert("Error al enviar: " + error.message);
       else input.value = '';
