@@ -76,11 +76,12 @@
       </div>
 
       <form id="profile-form" class="space-y-3">
+        <!-- Subir Imagen desde Archivos -->
         <div class="flex items-center gap-4">
-          <img id="profile-preview-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-16 h-16 rounded-full object-cover border-2 border-cyan-500">
+          <img id="profile-preview-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-16 h-16 rounded-full object-cover border-2 border-cyan-500 flex-shrink-0">
           <div class="flex-1">
-            <label class="text-[10px] text-slate-400 uppercase font-bold">URL Foto de Perfil</label>
-            <input id="profile-avatar-url" type="url" placeholder="https://ejemplo.com/foto.jpg" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 mt-1">
+            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Foto de Perfil</label>
+            <input id="profile-file-input" type="file" accept="image/*" class="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-cyan-400 hover:file:bg-slate-700 cursor-pointer">
           </div>
         </div>
 
@@ -104,7 +105,7 @@
 
         <div class="flex gap-2 pt-2">
           <button type="button" id="cancel-profile-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700">Cancelar</button>
-          <button type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Guardar Cambios</button>
+          <button type="submit" id="save-profile-btn" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Guardar Cambios</button>
         </div>
       </form>
     </div>
@@ -118,8 +119,9 @@
 
     let currentUser = null;
     let currentProfile = null;
+    let selectedFile = null;
 
-    // DOM Elements
+    // Elementos DOM
     const authScreen = document.getElementById('auth-screen');
     const chatScreen = document.getElementById('chat-screen');
     const userBar = document.getElementById('user-bar');
@@ -132,14 +134,14 @@
     const closeProfileBtn = document.getElementById('close-profile-btn');
     const cancelProfileBtn = document.getElementById('cancel-profile-btn');
     const profileForm = document.getElementById('profile-form');
+    const saveProfileBtn = document.getElementById('save-profile-btn');
 
-    const profileAvatarUrlInput = document.getElementById('profile-avatar-url');
+    const profileFileInput = document.getElementById('profile-file-input');
     const profilePreviewAvatar = document.getElementById('profile-preview-avatar');
     const profileUsernameInput = document.getElementById('profile-username');
     const profileHandleInput = document.getElementById('profile-handle');
     const profileBioInput = document.getElementById('profile-bio');
 
-    // Comprobar Sesión Activa
     async function checkUser() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
@@ -154,14 +156,13 @@
     async function loadProfile() {
       if (!currentUser) return;
 
-      let { data, error } = await supabaseClient
+      let { data } = await supabaseClient
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single();
 
       if (!data) {
-        // Crear perfil inicial si no existe
         const defaultUsername = currentUser.email.split('@')[0];
         const defaultHandle = defaultUsername.toLowerCase().replace(/[^a-z0-9]/g, '');
         const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
@@ -203,10 +204,11 @@
       loadMessages();
     }
 
-    // Modal Perfil
+    // Abrir Modal de Perfil
     openProfileBtn.addEventListener('click', () => {
       if (!currentProfile) return;
-      profileAvatarUrlInput.value = currentProfile.avatar_url || '';
+      selectedFile = null;
+      profileFileInput.value = '';
       profilePreviewAvatar.src = currentProfile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
       profileUsernameInput.value = currentProfile.username || '';
       profileHandleInput.value = currentProfile.handle || '';
@@ -217,15 +219,50 @@
     closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
     cancelProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
 
-    profileAvatarUrlInput.addEventListener('input', (e) => {
-      profilePreviewAvatar.src = e.target.value.trim() || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+    // Vista previa al seleccionar archivo local
+    profileFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        selectedFile = file;
+        profilePreviewAvatar.src = URL.createObjectURL(file);
+      }
     });
 
-    // Guardar Cambios de Perfil
+    // Guardar cambios de perfil (subiendo la imagen a Supabase Storage)
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
-      const avatar_url = profileAvatarUrlInput.value.trim() || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+      saveProfileBtn.disabled = true;
+      saveProfileBtn.textContent = 'Guardando...';
+
+      let avatarUrl = currentProfile?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+
+      // Si seleccionó un archivo local, lo subimos al bucket 'avatars'
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+        const filePath = fileName;
+
+        const { error: uploadError } = await supabaseClient
+          .storage
+          .from('avatars')
+          .upload(filePath, selectedFile, { upsert: true });
+
+        if (uploadError) {
+          alert('Error al subir la imagen: ' + uploadError.message);
+          saveProfileBtn.disabled = false;
+          saveProfileBtn.textContent = 'Guardar Cambios';
+          return;
+        }
+
+        // Obtener URL pública
+        const { data: publicUrlData } = supabaseClient
+          .storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        avatarUrl = publicUrlData.publicUrl;
+      }
+
       const username = profileUsernameInput.value.trim();
       const handle = profileHandleInput.value.trim().toLowerCase().replace(/\s+/g, '');
       const bio = profileBioInput.value.trim();
@@ -235,23 +272,26 @@
         .upsert({
           id: currentUser.id,
           email: currentUser.email,
-          avatar_url,
+          avatar_url: avatarUrl,
           username,
           handle,
           bio,
           updated_at: new Date()
         });
 
+      saveProfileBtn.disabled = false;
+      saveProfileBtn.textContent = 'Guardar Cambios';
+
       if (error) {
-        alert("Error guardando el perfil: " + error.message);
+        alert("Error al actualizar el perfil: " + error.message);
       } else {
         await loadProfile();
         profileModal.classList.add('hidden');
-        loadMessages(); // Refrescar chat con los nuevos datos
+        loadMessages();
       }
     });
 
-    // Autenticación Email
+    // Autenticación
     document.getElementById('email-auth-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('auth-email').value;
@@ -317,7 +357,6 @@
     }
 
     async function loadMessages() {
-      // Unir tabla messages con profiles para mostrar fotos y handles actualizados
       const { data, error } = await supabaseClient
         .from('messages')
         .select(`
@@ -334,7 +373,6 @@
         return;
       }
 
-      // Obtener perfiles de los usuarios
       const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
       let profilesMap = {};
 
