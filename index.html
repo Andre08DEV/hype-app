@@ -3,67 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype - Inicio</title>
+  <title>Hype App</title>
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { background-color: #0f172a; color: #f8fafc; padding: 16px; max-width: 600px; margin: 0 auto; }
     
-    /* Historias */
-    .stories-bar { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 1px solid #334155; }
-    .stories-bar::-webkit-scrollbar { display: none; }
-    .story-item { text-align: center; flex-shrink: 0; cursor: pointer; }
-    .story-avatar { width: 56px; height: 56px; border-radius: 50%; padding: 2px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
-    .story-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #0f172a; }
-    .story-username { font-size: 11px; color: #94a3b8; margin-top: 4px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    
-    /* Crear Publicación */
-    .create-post { background: #1e293b; padding: 14px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
-    .create-post textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; padding: 10px; resize: none; outline: none; margin-bottom: 10px; }
-    .post-actions { display: flex; justify-content: space-between; align-items: center; }
-    .post-actions input[type="file"] { color: #94a3b8; font-size: 12px; }
-    .btn-submit { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    
-    /* Posts Feed */
+    /* 1. SECCIÓN DE ESTADOS / HISTORIAS */
+    .stories-container { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 1px solid #334155; }
+    .stories-container::-webkit-scrollbar { display: none; }
+    .story-card { text-align: center; flex-shrink: 0; cursor: pointer; }
+    .story-ring { width: 58px; height: 58px; border-radius: 50%; padding: 2px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+    .story-ring img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #0f172a; }
+    .story-label { font-size: 11px; color: #94a3b8; margin-top: 4px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .add-story-btn { width: 58px; height: 58px; border-radius: 50%; background: #1e293b; display: flex; align-items: center; justify-content: center; border: 2px dashed #64748b; font-size: 22px; }
+
+    /* 2. FORMULARIO PARA CREAR PUBLICACIÓN */
+    .create-post-card { background: #1e293b; padding: 16px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 24px; }
+    .create-post-card textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f8fafc; padding: 12px; resize: none; outline: none; margin-bottom: 12px; font-size: 14px; }
+    .post-form-actions { display: flex; justify-content: space-between; align-items: center; }
+    .post-form-actions input[type="file"] { color: #94a3b8; font-size: 12px; }
+    .btn-publish { background: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+    .btn-publish:hover { background: #1d4ed8; }
+
+    /* 3. FEED DE PUBLICACIONES */
     .post-card { background: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155; }
     .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-    .post-user-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-    .post-user-name { font-size: 14px; font-weight: 600; color: #f8fafc; margin: 0; }
-    .post-user-handle { font-size: 12px; color: #64748b; }
-    .post-badge { font-size: 10px; background: #2563eb; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
-    .post-content { font-size: 14px; color: #e2e8f0; margin-bottom: 12px; line-height: 1.4; }
-    .post-image { width: 100%; border-radius: 8px; margin-bottom: 12px; max-height: 380px; object-fit: cover; }
-    .post-footer { display: flex; gap: 16px; padding-top: 8px; border-top: 1px solid #334155; }
-    .btn-like { background: none; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .post-avatar { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+    .post-author { font-size: 15px; font-weight: 600; color: #f8fafc; margin: 0; }
+    .post-handle { font-size: 12px; color: #64748b; }
+    .news-badge { font-size: 10px; background: #2563eb; color: #ffffff; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: bold; }
+    .post-text { font-size: 14px; color: #e2e8f0; margin-bottom: 12px; line-height: 1.5; }
+    .post-media { width: 100%; border-radius: 8px; margin-bottom: 12px; max-height: 400px; object-fit: cover; }
+    .post-footer { display: flex; gap: 16px; padding-top: 10px; border-top: 1px solid #334155; }
+    .btn-action { background: none; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 14px; }
   </style>
 </head>
 <body>
 
-  <!-- 1. BARRA DE ESTADOS / HISTORIAS -->
-  <div class="stories-bar" id="storiesContainer">
-    <div class="story-item" onclick="document.getElementById('storyFileInput').click()">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; border: 2px dashed #64748b; font-size: 20px;">➕</div>
-      <p class="story-username">Tu estado</p>
+  <!-- HISTORIAS / ESTADOS -->
+  <div class="stories-container" id="storiesContainer">
+    <div class="story-card" onclick="document.getElementById('storyFileInput').click()">
+      <div class="add-story-btn">➕</div>
+      <p class="story-label">Tu estado</p>
       <input type="file" id="storyFileInput" accept="image/*,video/*" style="display: none;" onchange="uploadStory(this.files[0])">
     </div>
   </div>
 
-  <!-- 2. FORMULARIO PARA PUBLICAR -->
-  <form class="create-post" id="postForm">
+  <!-- CREAR PUBLICACIÓN -->
+  <form class="create-post-card" id="postForm">
     <textarea id="postInput" rows="3" placeholder="¿Qué está pasando?"></textarea>
-    <div class="post-actions">
+    <div class="post-form-actions">
       <input type="file" id="imageInput" accept="image/*">
-      <button type="submit" class="btn-submit">Publicar</button>
+      <button type="submit" class="btn-publish">Publicar</button>
     </div>
   </form>
 
-  <!-- 3. FEED DE NOTICIAS Y PUBLICACIONES -->
+  <!-- FEED PRINCIPAL -->
   <div id="feedContainer"></div>
 
-  <!-- JAVASCRIPT INTEGRADO -->
   <script>
-    // Inicialización del cliente Supabase (Reemplaza con tus variables)
+    // Configuración de Supabase (Descomenta y agrega tus llaves si no las tienes importadas previamente)
     // const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
     // const SUPABASE_KEY = 'tu-anon-key';
     // const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -81,7 +82,7 @@
       document.getElementById('postForm').addEventListener('submit', handlePostSubmit);
     });
 
-    // Cargar Historias
+    // CARGAR HISTORIAS / ESTADOS
     async function loadStories() {
       const container = document.getElementById('storiesContainer');
       const { data: stories } = await supabase
@@ -91,21 +92,21 @@
         .order('created_at', { ascending: false });
 
       let html = `
-        <div class="story-item" onclick="document.getElementById('storyFileInput').click()">
-          <div style="width: 56px; height: 56px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; border: 2px dashed #64748b; font-size: 20px;">➕</div>
-          <p class="story-username">Tu estado</p>
+        <div class="story-card" onclick="document.getElementById('storyFileInput').click()">
+          <div class="add-story-btn">➕</div>
+          <p class="story-label">Tu estado</p>
           <input type="file" id="storyFileInput" accept="image/*,video/*" style="display: none;" onchange="uploadStory(this.files[0])">
         </div>
       `;
 
-      if (stories) {
+      if (stories && stories.length > 0) {
         stories.forEach(story => {
           html += `
-            <div class="story-item">
-              <div class="story-avatar">
+            <div class="story-card">
+              <div class="story-ring">
                 <img src="${story.profiles?.avatar_url || 'https://via.placeholder.com/150'}">
               </div>
-              <p class="story-username">${story.profiles?.username || 'Usuario'}</p>
+              <p class="story-label">${story.profiles?.username || 'Usuario'}</p>
             </div>
           `;
         });
@@ -113,13 +114,13 @@
       container.innerHTML = html;
     }
 
-    // Subir Estado
+    // SUBIR ESTADO
     async function uploadStory(file) {
-      if (!file || !currentUser) return alert('Debes iniciar sesión para publicar un estado');
+      if (!file || !currentUser) return alert('Debes iniciar sesión para compartir un estado');
       const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
       
       const { error } = await supabase.storage.from('stories').upload(filePath, file);
-      if (error) return alert('Error al subir el archivo');
+      if (error) return alert('Error al subir la historia');
 
       const { data } = supabase.storage.from('stories').getPublicUrl(filePath);
       await supabase.from('stories').insert([{
@@ -131,7 +132,7 @@
       loadStories();
     }
 
-    // Cargar Feed / Publicaciones
+    // CARGAR FEED DE PUBLICACIONES
     async function loadFeed() {
       const container = document.getElementById('feedContainer');
       const { data: posts } = await supabase
@@ -142,7 +143,7 @@
       if (!posts) return;
 
       container.innerHTML = posts.map(post => {
-        const isLiked = currentUser ? post.post_likes?.some(l => l.user_id === currentUser.id) : false;
+        const isLiked = currentUser ? post.post_likes?.some(like => like.user_id === currentUser.id) : false;
         const likesCount = post.post_likes?.length || 0;
         const username = post.profiles?.username || 'Usuario';
         const handle = post.profiles?.handle || 'usuario';
@@ -150,18 +151,18 @@
         return `
           <div class="post-card">
             <div class="post-header">
-              <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="post-user-img">
+              <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="post-avatar">
               <div>
-                <h4 class="post-user-name">${username} ${post.is_news ? '<span class="post-badge">📰 NOTICIA</span>' : ''}</h4>
-                <span class="post-user-handle">@${handle}</span>
+                <h4 class="post-author">${username} ${post.is_news ? '<span class="news-badge">📰 NOTICIA</span>' : ''}</h4>
+                <span class="post-handle">@${handle}</span>
               </div>
             </div>
 
-            ${post.content ? `<p class="post-content">${post.content}</p>` : ''}
-            ${post.image_url ? `<img src="${post.image_url}" class="post-image">` : ''}
+            ${post.content ? `<p class="post-text">${post.content}</p>` : ''}
+            ${post.image_url ? `<img src="${post.image_url}" class="post-media">` : ''}
 
             <div class="post-footer">
-              <button onclick="toggleLike('${post.id}', ${isLiked})" class="btn-like" style="color: ${isLiked ? '#ef4444' : '#94a3b8'}">
+              <button onclick="toggleLike('${post.id}', ${isLiked})" class="btn-action" style="color: ${isLiked ? '#ef4444' : '#94a3b8'}">
                 ${isLiked ? '❤️' : '🤍'} <span>${likesCount}</span>
               </button>
             </div>
@@ -170,7 +171,7 @@
       }).join('');
     }
 
-    // Enviar Publicación
+    // PUBLICAR
     async function handlePostSubmit(e) {
       e.preventDefault();
       if (!currentUser) return alert('Debes iniciar sesión para publicar');
@@ -201,9 +202,9 @@
       loadFeed();
     }
 
-    // Me gusta
+    // ME GUSTA
     async function toggleLike(postId, isLiked) {
-      if (!currentUser) return alert('Inicia sesión para interactuar');
+      if (!currentUser) return alert('Debes iniciar sesión para reaccionar');
       if (isLiked) {
         await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
       } else {
@@ -212,10 +213,10 @@
       loadFeed();
     }
 
-    // Cambios en tiempo real
+    // SUSCRIPCIÓN EN TIEMPO REAL
     function subscribeRealtime() {
       supabase
-        .channel('public:realtime_feed')
+        .channel('public:app_feed')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadFeed())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => loadStories())
         .subscribe();
