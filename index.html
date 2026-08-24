@@ -42,7 +42,7 @@
       </div>
 
       <!-- BOTÓN DE INICIO DE SESIÓN CON GOOGLE -->
-      <button type="button" onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 rounded-xl shadow-md transition text-sm flex items-center justify-center gap-3">
+      <button type="button" id="btnGoogleLogin" onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 rounded-xl shadow-md transition text-sm flex items-center justify-center gap-3 active:scale-95">
         <svg class="w-5 h-5" viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -86,9 +86,9 @@
 
       <div class="border-t border-slate-700 pt-3">
         <!-- BOTÓN DE INVITADO -->
-        <button type="button" id="btnGuestAccess" onclick="enterAsGuest()" class="w-full bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl border border-slate-600/50 transition text-xs flex items-center justify-center gap-2">
+        <button type="button" id="btnGuestAccess" onclick="enterAsGuest()" class="w-full bg-slate-700/80 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 rounded-xl border border-slate-600 transition text-xs flex items-center justify-center gap-2 active:scale-95">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          Entrar como Invitado (Solo Lectura)
+          Entrar como Invitado (Modo Lectura)
         </button>
       </div>
     </div>
@@ -110,38 +110,20 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </button>
 
-        <!-- PANEL EXTENDIDO DE CONFIGURACIÓN -->
         <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-4 z-50 space-y-4">
           <div class="border-b border-slate-700 pb-3">
             <p class="text-xs font-bold text-slate-400 uppercase">Mi Cuenta</p>
             <p id="menuUserLabel" class="text-sm font-semibold text-white mt-0.5 truncate">Invitado</p>
           </div>
 
-          <!-- APARIENCIA -->
           <div class="space-y-2">
             <span class="text-xs font-semibold text-slate-400">Tema Visual</span>
             <div class="grid grid-cols-2 gap-2">
-              <button onclick="setTheme('dark')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-900 rounded-xl text-xs font-semibold border border-blue-500 text-blue-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-                Oscuro
-              </button>
-              <button onclick="setTheme('light')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:text-white">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                Claro
-              </button>
+              <button onclick="setTheme('dark')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-900 rounded-xl text-xs font-semibold border border-blue-500 text-blue-400">Oscuro</button>
+              <button onclick="setTheme('light')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:text-white">Claro</button>
             </div>
           </div>
 
-          <!-- PRIVACIDAD -->
-          <div class="space-y-2 border-t border-slate-700 pt-3">
-            <span class="text-xs font-semibold text-slate-400">Privacidad</span>
-            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer p-1.5 rounded-lg hover:bg-slate-700/50">
-              <span>Perfil Privado</span>
-              <input type="checkbox" class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
-            </label>
-          </div>
-
-          <!-- CERRAR / INICIAR SESIÓN -->
           <div class="border-t border-slate-700 pt-3">
             <button onclick="logoutOrLogin()" id="menuAuthBtn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-xs transition">
               Iniciar Sesión
@@ -172,133 +154,56 @@
       </div>
     </section>
 
-    <!-- NAVEGACIÓN TABS -->
-    <div class="flex border-b border-slate-800 text-sm font-semibold">
-      <button id="tabFeedBtn" onclick="switchTab('feed')" class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition flex items-center justify-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
-        Feed Global
-      </button>
-      <button id="tabHubsBtn" onclick="switchTab('hubs')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        Hubs
-      </button>
-    </div>
-
-    <!-- PESTAÑA FEED -->
+    <!-- PESTAÑA FEED Y FORMULARIO -->
     <div id="tabContentFeed" class="space-y-6">
-      
-      <!-- FORMULARIO DE PUBLICACIÓN -->
       <div id="postFormContainer" class="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 shadow-lg">
         <form id="postForm" class="space-y-3">
-          <textarea id="postInput" rows="3" placeholder="¿Qué estás creando o pensando?" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
-          
-          <div id="imagePreviewContainer" class="hidden relative">
-            <img id="imagePreview" src="" class="max-h-48 rounded-xl object-cover border border-slate-700">
-            <button type="button" onclick="clearImageSelection()" class="absolute top-2 right-2 bg-slate-900/80 text-white p-1.5 rounded-full">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-
-          <div class="flex items-center justify-between pt-2 border-t border-slate-700/50">
-            <label class="cursor-pointer flex items-center gap-2 text-xs text-slate-400 hover:text-blue-400 transition">
-              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-              <span>Añadir Imagen</span>
-              <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImagePreview(this)">
-            </label>
-
-            <button type="submit" id="btnPublish" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-500/20">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-              <span>Publicar</span>
-            </button>
+          <textarea id="postInput" rows="3" placeholder="¿Qué estás pensando?" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
+          <div class="flex items-center justify-end pt-2 border-t border-slate-700/50">
+            <button type="submit" id="btnPublish" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition">Publicar</button>
           </div>
         </form>
       </div>
 
       <!-- AVISO DE INVITADO -->
-      <div id="guestNotice" class="hidden bg-slate-800/60 border border-slate-700 p-3.5 rounded-xl text-center text-xs text-slate-400">
-        Estás en modo <strong class="text-slate-200">Invitado</strong>. Para publicar e interactuar, 
-        <button onclick="showAuthModal()" class="text-blue-400 font-bold underline ml-1">Inicia Sesión</button>.
+      <div id="guestNotice" class="hidden bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-center text-xs text-slate-300">
+        Estás navegado como <strong class="text-blue-400">Invitado</strong>. Para publicar e interactuar, 
+        <button onclick="showAuthModal()" class="text-blue-400 font-bold underline ml-1">Inicia Sesión aquí</button>.
       </div>
 
-      <!-- CONTENEDOR FEED -->
       <div id="feedContainer" class="space-y-4"></div>
     </div>
-
-    <!-- PESTAÑA HUBS -->
-    <div id="tabContentHubs" class="hidden space-y-4">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-start gap-3">
-          <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          </div>
-          <div>
-            <h3 class="font-bold text-sm text-white">Proyectos & Apps</h3>
-            <p class="text-xs text-slate-400 mt-1">Lanza tus proyectos y recibe feedback directo.</p>
-          </div>
-        </div>
-
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-start gap-3">
-          <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
-          </div>
-          <div>
-            <h3 class="font-bold text-sm text-white">Hardware & Reparación</h3>
-            <p class="text-xs text-slate-400 mt-1">Electrónica, componentes, diagramas y pinouts.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </main>
 
-  <!-- NAVEGACIÓN INFERIOR -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 border-t border-slate-800 backdrop-blur-lg z-40">
-    <div class="max-w-2xl mx-auto flex justify-around py-2.5">
-      <button onclick="switchTab('feed')" class="flex flex-col items-center gap-1 text-blue-500">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-        <span class="text-[10px] font-semibold">Inicio</span>
-      </button>
-
-      <button onclick="switchTab('hubs')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <span class="text-[10px] font-semibold">Hubs</span>
-      </button>
-
-      <button onclick="scrollToTop()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7 7 7M12 3v18"/></svg>
-        <span class="text-[10px] font-semibold">Arriba</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- LÓGICA JAVASCRIPT & SUPABASE -->
   <script>
+    // Inicialización segura de cliente Supabase
     const SUPABASE_URL = window.SUPABASE_URL || 'https://tu-proyecto.supabase.co';
     const SUPABASE_KEY = window.SUPABASE_KEY || 'tu-anon-key';
-    const supabase = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let supabaseClient = null;
+    try {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch(e) {
+      console.warn("Supabase no inicializado con credenciales reales.");
+    }
 
     let currentUser = null;
-    let isSignUpMode = false;
 
     document.addEventListener('DOMContentLoaded', async () => {
       await checkSession();
-      await loadStories();
       await loadFeed();
-      subscribeRealtimeEvents();
-
-      document.getElementById('postForm').addEventListener('submit', handlePostSubmit);
     });
 
     async function checkSession() {
+      if (!supabaseClient) return;
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
           currentUser = user;
-          document.getElementById('authModal').classList.add('hidden');
+          hideAuthModal();
           document.getElementById('postFormContainer').classList.remove('hidden');
           document.getElementById('guestNotice').classList.add('hidden');
           document.getElementById('menuUserLabel').innerText = user.email || 'Usuario';
-          document.getElementById('menuAuthBtn').innerText = 'Cerrar Sesión';
         } else {
           showAuthModal();
         }
@@ -308,58 +213,46 @@
     }
 
     function showAuthModal() {
-      document.getElementById('authModal').classList.remove('hidden');
+      const modal = document.getElementById('authModal');
+      modal.classList.remove('hidden');
+      modal.style.display = 'flex';
     }
 
-    // ACCESO INVITADO CORREGIDO
-    function enterAsGuest() {
-      currentUser = null;
+    function hideAuthModal() {
       const modal = document.getElementById('authModal');
       modal.classList.add('hidden');
+      modal.style.display = 'none';
+    }
+
+    // FIX 1: ACCESO INVITADO DIRECTO Y FORZADO
+    function enterAsGuest() {
+      currentUser = null;
+      hideAuthModal();
       
       document.getElementById('postFormContainer').classList.add('hidden');
       document.getElementById('guestNotice').classList.remove('hidden');
-      document.getElementById('menuUserLabel').innerText = 'Invitado (Solo Vista)';
+      document.getElementById('menuUserLabel').innerText = 'Invitado (Solo Lectura)';
       document.getElementById('menuAuthBtn').innerText = 'Iniciar Sesión';
     }
 
-    // AUTH GOOGLE
+    // FIX 2: LOGIN CON GOOGLE
     async function loginWithGoogle() {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      if (!supabaseClient) {
+        alert("Falta configurar la URL y la Key de Supabase.");
+        return;
+      }
+
+      const { data, error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.href
         }
       });
+
       if (error) {
         const errBox = document.getElementById('authError');
-        errBox.innerText = error.message;
+        errBox.innerText = "Error con Google: " + error.message;
         errBox.classList.remove('hidden');
-      }
-    }
-
-    function toggleAuthMode() {
-      isSignUpMode = !isSignUpMode;
-      const title = document.getElementById('authTitle');
-      const subtitle = document.getElementById('authSubtitle');
-      const submitBtn = document.getElementById('authSubmitBtn');
-      const toggleText = document.getElementById('authToggleText');
-      const toggleBtn = document.getElementById('authToggleBtn');
-      const errBox = document.getElementById('authError');
-      errBox.classList.add('hidden');
-
-      if (isSignUpMode) {
-        title.innerText = "Crear Cuenta";
-        subtitle.innerText = "Únete a HYPE creando tu perfil";
-        submitBtn.querySelector('span').innerText = "Registrarse";
-        toggleText.innerText = "¿Ya tienes cuenta?";
-        toggleBtn.innerText = "Inicia Sesión";
-      } else {
-        title.innerText = "Bienvenido a HYPE";
-        subtitle.innerText = "Ingresa a tu cuenta para continuar";
-        submitBtn.querySelector('span').innerText = "Iniciar Sesión";
-        toggleText.innerText = "¿No tienes cuenta?";
-        toggleBtn.innerText = "Regístrate";
       }
     }
 
@@ -370,15 +263,15 @@
       const errBox = document.getElementById('authError');
       errBox.classList.add('hidden');
 
+      if (!supabaseClient) {
+        errBox.innerText = "Error: Configura SUPABASE_URL y SUPABASE_KEY";
+        errBox.classList.remove('hidden');
+        return;
+      }
+
       try {
-        if (isSignUpMode) {
-          const { data, error } = await supabase.auth.signUp({ email, password });
-          if (error) throw error;
-          alert("Registro exitoso. Revisa tu correo si tienes confirmación activada.");
-        } else {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-        }
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
         await checkSession();
       } catch (err) {
         errBox.innerText = err.message || "Error al autenticar";
@@ -386,209 +279,28 @@
       }
     }
 
-    function logoutOrLogin() {
-      if (currentUser) {
-        supabase.auth.signOut().then(() => location.reload());
-      } else {
-        showAuthModal();
-      }
-    }
-
     function toggleSettingsMenu() {
       document.getElementById('settingsMenu').classList.toggle('hidden');
     }
 
-    function setTheme(mode) {
-      if (mode === 'dark') {
-        document.documentElement.classList.add('dark');
+    function logoutOrLogin() {
+      if (currentUser && supabaseClient) {
+        supabaseClient.auth.signOut().then(() => location.reload());
       } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-
-    function switchTab(tab) {
-      const feedTab = document.getElementById('tabContentFeed');
-      const hubsTab = document.getElementById('tabContentHubs');
-      const feedBtn = document.getElementById('tabFeedBtn');
-      const hubsBtn = document.getElementById('tabHubsBtn');
-
-      if (tab === 'feed') {
-        feedTab.classList.remove('hidden');
-        hubsTab.classList.add('hidden');
-        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition flex items-center justify-center gap-2";
-        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2";
-      } else {
-        feedTab.classList.add('hidden');
-        hubsTab.classList.remove('hidden');
-        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition flex items-center justify-center gap-2";
-        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2";
-      }
-    }
-
-    function triggerStoryUpload() {
-      if (!currentUser) {
         showAuthModal();
-        return;
       }
-      document.getElementById('storyFileInput').click();
-    }
-
-    async function loadStories() {
-      const container = document.getElementById('storiesContainer');
-      const { data: stories } = await supabase
-        .from('stories')
-        .select('*, profiles(username, avatar_url)')
-        .gte('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      let baseHTML = `
-        <div class="flex-shrink-0 text-center cursor-pointer group" onclick="triggerStoryUpload()">
-          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-blue-400 transition">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          </div>
-          <span class="text-xs text-slate-400 mt-1 block">Añadir</span>
-          <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(this.files[0])">
-        </div>
-      `;
-
-      if (stories && stories.length > 0) {
-        stories.forEach(s => {
-          baseHTML += `
-            <div class="flex-shrink-0 text-center cursor-pointer">
-              <div class="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600">
-                <img src="${s.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="w-full h-full rounded-full object-cover border-2 border-slate-900">
-              </div>
-              <span class="text-xs text-slate-400 mt-1 block max-w-[60px] truncate">${s.profiles?.username || 'Usuario'}</span>
-            </div>
-          `;
-        });
-      }
-      container.innerHTML = baseHTML;
-    }
-
-    async function uploadStory(file) {
-      if (!file || !currentUser) return;
-      const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
-      await supabase.storage.from('stories').upload(filePath, file);
-      const { data } = supabase.storage.from('stories').getPublicUrl(filePath);
-
-      await supabase.from('stories').insert([{
-        user_id: currentUser.id,
-        media_url: data.publicUrl,
-        type: file.type.includes('video') ? 'video' : 'image'
-      }]);
-
-      loadStories();
-    }
-
-    function handleImagePreview(input) {
-      if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          document.getElementById('imagePreview').src = e.target.result;
-          document.getElementById('imagePreviewContainer').classList.remove('hidden');
-        }
-        reader.readAsDataURL(input.files[0]);
-      }
-    }
-
-    function clearImageSelection() {
-      document.getElementById('imageInput').value = '';
-      document.getElementById('imagePreviewContainer').classList.add('hidden');
     }
 
     async function loadFeed() {
       const container = document.getElementById('feedContainer');
-      const { data: posts } = await supabase
-        .from('posts')
-        .select('*, profiles(username, avatar_url, handle), post_likes(user_id)')
-        .order('created_at', { ascending: false });
-
+      if (!supabaseClient) {
+        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">Modo de prueba HTML sin conexión a Supabase activa.</div>`;
+        return;
+      }
+      const { data: posts } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
       if (!posts || posts.length === 0) {
         container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No hay publicaciones aún.</div>`;
-        return;
       }
-
-      container.innerHTML = posts.map(post => {
-        const isLiked = currentUser ? post.post_likes?.some(l => l.user_id === currentUser.id) : false;
-        const likesCount = post.post_likes?.length || 0;
-
-        return `
-          <article class="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 shadow-md">
-            <div class="flex items-center gap-3 mb-3">
-              <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-full object-cover border border-slate-700">
-              <div>
-                <h4 class="text-sm font-semibold text-white">${post.profiles?.username || 'Usuario'}</h4>
-                <span class="text-xs text-slate-500">@${post.profiles?.handle || 'usuario'}</span>
-              </div>
-            </div>
-
-            ${post.content ? `<p class="text-sm text-slate-200 mb-3 whitespace-pre-line">${post.content}</p>` : ''}
-            ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-xl mb-3 border border-slate-700/80 max-h-96 object-cover">` : ''}
-
-            <div class="flex items-center gap-4 pt-2 border-t border-slate-700/50">
-              <button onclick="toggleLike('${post.id}', ${isLiked})" class="flex items-center gap-1.5 text-xs font-semibold ${isLiked ? 'text-red-500' : 'text-slate-400 hover:text-slate-200'} transition">
-                <svg class="w-4 h-4 ${isLiked ? 'fill-current' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-1.414-6.364 4.5 4.5 0 00-6.364 0L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                <span>${likesCount}</span>
-              </button>
-            </div>
-          </article>
-        `;
-      }).join('');
-    }
-
-    async function handlePostSubmit(e) {
-      e.preventDefault();
-      if (!currentUser) {
-        showAuthModal();
-        return;
-      }
-
-      const input = document.getElementById('postInput');
-      const fileInput = document.getElementById('imageInput');
-      const content = input.value.trim();
-      const file = fileInput.files[0];
-
-      if (!content && !file) return;
-
-      let imageUrl = null;
-      if (file) {
-        const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
-        await supabase.storage.from('posts').upload(filePath, file);
-        const { data } = supabase.storage.from('posts').getPublicUrl(filePath);
-        imageUrl = data.publicUrl;
-      }
-
-      await supabase.from('posts').insert([{
-        user_id: currentUser.id,
-        content: content || null,
-        image_url: imageUrl
-      }]);
-
-      input.value = '';
-      clearImageSelection();
-      loadFeed();
-    }
-
-    async function toggleLike(postId, isLiked) {
-      if (!currentUser) {
-        showAuthModal();
-        return;
-      }
-      if (isLiked) {
-        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
-      } else {
-        await supabase.from('post_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
-      }
-      loadFeed();
-    }
-
-    function subscribeRealtimeEvents() {
-      supabase
-        .channel('realtime_app')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadFeed())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => loadStories())
-        .subscribe();
     }
 
     function scrollToTop() {
