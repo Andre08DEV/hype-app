@@ -12,12 +12,8 @@
       theme: {
         extend: {
           colors: {
-            brand: {
-              50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8'
-            },
-            dark: {
-              bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f8fafc', muted: '#94a3b8'
-            }
+            brand: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+            dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f8fafc', muted: '#94a3b8' }
           }
         }
       }
@@ -26,129 +22,220 @@
   <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Ocultar barra de desplazamiento manteniendo funcionalidad scroll */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 selection:bg-blue-500 selection:text-white antialiased">
+<body class="bg-slate-900 dark:bg-slate-900 text-slate-100 min-h-screen pb-20 antialiased transition-colors duration-200">
 
-  <!-- ENCABEZADO / NAVBAR TOP -->
-  <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3">
-    <div class="max-w-2xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl font-black bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">HYPE</span>
-        <span class="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/20">PRO</span>
+  <!-- MODAL OBLIGATORIO DE ENTRADA (AUTH / INVITADO) -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl text-center space-y-6">
+      <div class="flex justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <button id="authBtn" onclick="handleAuthAction()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg transition">
-          Iniciar Sesión
+      <div>
+        <h2 class="text-2xl font-black tracking-tight text-white">Bienvenido a HYPE</h2>
+        <p class="text-xs text-slate-400 mt-1">Conéctate con creadores, comparte proyectos y vive la red.</p>
+      </div>
+
+      <div class="space-y-3">
+        <button onclick="handleLoginSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+          Iniciar Sesión / Registrarse
         </button>
+        <button onclick="enterAsGuest()" class="w-full bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl border border-slate-600/50 transition text-sm">
+          Entrar como Invitado (Solo Lectura)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENCABEZADO PRINCIPAL -->
+  <header class="sticky top-0 z-40 bg-slate-900/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="scrollToTop()">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <span class="text-xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">HYPE</span>
+      </div>
+
+      <!-- BOTÓN AJUSTES Y DE CUENTA -->
+      <div class="relative">
+        <button onclick="toggleSettingsMenu()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
+
+        <!-- PANEL EXTENDIDO DE CONFIGURACIÓN Y PRIVACIDAD -->
+        <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-4 z-50 space-y-4">
+          <div class="border-b border-slate-700 pb-3">
+            <p class="text-xs font-bold text-slate-400 uppercase">Mi Cuenta</p>
+            <p id="menuUserLabel" class="text-sm font-semibold text-white mt-0.5">Invitado</p>
+          </div>
+
+          <!-- APARIENCIA -->
+          <div class="space-y-2">
+            <span class="text-xs font-semibold text-slate-400">Tema Visual</span>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="setTheme('dark')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-900 rounded-xl text-xs font-semibold border border-blue-500 text-blue-400">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                Oscuro
+              </button>
+              <button onclick="setTheme('light')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                Claro
+              </button>
+            </div>
+          </div>
+
+          <!-- PRIVACIDAD & OPCIONES -->
+          <div class="space-y-2 border-t border-slate-700 pt-3">
+            <span class="text-xs font-semibold text-slate-400">Privacidad y Control</span>
+            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer p-1.5 rounded-lg hover:bg-slate-700/50">
+              <span>Perfil Privado</span>
+              <input type="checkbox" onchange="togglePrivateProfile(this.checked)" class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
+            </label>
+            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer p-1.5 rounded-lg hover:bg-slate-700/50">
+              <span>Permitir Reacciones</span>
+              <input type="checkbox" checked class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
+            </label>
+          </div>
+
+          <!-- ACCIÓN SESIÓN -->
+          <div class="border-t border-slate-700 pt-3">
+            <button onclick="logoutOrLogin()" id="menuAuthBtn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-xs transition">
+              Iniciar Sesión
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- CONTENEDOR PRINCIPAL -->
+  <!-- CONTENIDO PRINCIPAL -->
   <main class="max-w-2xl mx-auto p-4 space-y-6">
 
-    <!-- 1. SECCIÓN DE ESTADOS / HISTORIAS (24H) -->
+    <!-- HISTORIAS / ESTADOS -->
     <section class="border-b border-slate-800 pb-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estados / Historias</h2>
-        <span class="text-[10px] text-slate-500">Efímero 24h</span>
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estados</h2>
+        <span class="text-[10px] text-slate-500 font-medium">24 Horas</span>
       </div>
       <div id="storiesContainer" class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-        <!-- Tarjeta para crear Historia -->
         <div class="flex-shrink-0 text-center cursor-pointer group" onclick="triggerStoryUpload()">
-          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-xl transition">
-            ⚡
+          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-blue-400 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           </div>
-          <span class="text-xs text-slate-400 mt-1 block group-hover:text-slate-200">Tu estado</span>
+          <span class="text-xs text-slate-400 mt-1 block">Añadir</span>
           <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(this.files[0])">
         </div>
-        <!-- Historias dinámicas -->
       </div>
     </section>
 
-    <!-- 2. NAVEGACIÓN POR PESTAÑAS (TABS) -->
+    <!-- NAVEGACIÓN TABS -->
     <div class="flex border-b border-slate-800 text-sm font-semibold">
-      <button id="tabFeedBtn" onclick="switchTab('feed')" class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition">
-        🚀 Feed Global
+      <button id="tabFeedBtn" onclick="switchTab('feed')" class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+        Feed Global
       </button>
-      <button id="tabHubsBtn" onclick="switchTab('hubs')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
-        🌐 Hubs & Comunidades
+      <button id="tabHubsBtn" onclick="switchTab('hubs')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Hubs
       </button>
     </div>
 
-    <!-- CONTENIDO PESTAÑA 1: FEED & CREACIÓN -->
+    <!-- PESTAÑA FEED Y FORMULARIO -->
     <div id="tabContentFeed" class="space-y-6">
       
-      <!-- FORMULARIO DE CREACIÓN DE PUBLICACIÓN -->
-      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg">
+      <!-- FORMULARIO DE PUBLICACIÓN -->
+      <div id="postFormContainer" class="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 shadow-lg">
         <form id="postForm" class="space-y-3">
-          <textarea id="postInput" rows="3" placeholder="¿Qué proyecto o idea estás construyendo hoy?" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
+          <textarea id="postInput" rows="3" placeholder="¿Qué estás creando o pensando?" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
           
           <div id="imagePreviewContainer" class="hidden relative">
-            <img id="imagePreview" src="" class="max-h-48 rounded-lg object-cover border border-slate-700">
-            <button type="button" onclick="clearImageSelection()" class="absolute top-2 right-2 bg-slate-900/80 text-white p-1 rounded-full text-xs">✕</button>
+            <img id="imagePreview" src="" class="max-h-48 rounded-xl object-cover border border-slate-700">
+            <button type="button" onclick="clearImageSelection()" class="absolute top-2 right-2 bg-slate-900/80 text-white p-1.5 rounded-full">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
           </div>
 
           <div class="flex items-center justify-between pt-2 border-t border-slate-700/50">
-            <label class="cursor-pointer flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition">
-              🖼️ <span>Adjuntar Imagen</span>
+            <label class="cursor-pointer flex items-center gap-2 text-xs text-slate-400 hover:text-blue-400 transition">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <span>Añadir Imagen</span>
               <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImagePreview(this)">
             </label>
 
-            <button type="submit" id="btnPublish" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2 rounded-lg transition flex items-center gap-2">
+            <button type="submit" id="btnPublish" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
               <span>Publicar</span>
             </button>
           </div>
         </form>
       </div>
 
-      <!-- ALIMENTACIÓN DE CONTENIDO / FEED DE POSTS -->
-      <div id="feedContainer" class="space-y-4">
-        <!-- Carga de Posts dinámicos -->
+      <!-- BANNER DE MODO INVITADO -->
+      <div id="guestNotice" class="hidden bg-slate-800/60 border border-slate-700 p-3 rounded-xl text-center text-xs text-slate-400">
+        Estás navegando como <strong class="text-slate-200">Invitado</strong>. Para publicar e interactuar, 
+        <button onclick="showAuthModal()" class="text-blue-400 font-bold underline ml-1">Inicia Sesión</button>.
       </div>
+
+      <!-- CONTENEDOR FEED DE POSTS -->
+      <div id="feedContainer" class="space-y-4"></div>
     </div>
 
-    <!-- CONTENIDO PESTAÑA 2: HUBS & COMUNIDADES -->
+    <!-- PESTAÑA HUBS -->
     <div id="tabContentHubs" class="hidden space-y-4">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <h3 class="font-bold text-blue-400">🔥 Proyectos & Startups</h3>
-          <p class="text-xs text-slate-400 mt-1">Comparte avances, demos y recibe retroalimentación.</p>
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-start gap-3">
+          <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-white">Proyectos & Apps</h3>
+            <p class="text-xs text-slate-400 mt-1">Lanza tus proyectos y recibe feedback directo.</p>
+          </div>
         </div>
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <h3 class="font-bold text-indigo-400">⚙️ Tech & Hardware Repair</h3>
-          <p class="text-xs text-slate-400 mt-1">Discusión técnica, diagramas y prototipado.</p>
+
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-start gap-3">
+          <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-white">Hardware & Reparación</h3>
+            <p class="text-xs text-slate-400 mt-1">Electrónica, componentes, diagramas y pinouts.</p>
+          </div>
         </div>
       </div>
     </div>
 
   </main>
 
-  <!-- BARRA DE NAVEGACIÓN INFERIOR (MOBILE BOTTOM NAV) -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-800 backdrop-blur-lg z-50">
-    <div class="max-w-2xl mx-auto flex justify-around py-2">
+  <!-- NAVEGACIÓN INFERIOR -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/90 border-t border-slate-800 backdrop-blur-lg z-40">
+    <div class="max-w-2xl mx-auto flex justify-around py-2.5">
       <button onclick="switchTab('feed')" class="flex flex-col items-center gap-1 text-blue-500">
-        <span class="text-lg">🏠</span>
-        <span class="text-[10px] font-medium">Inicio</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span class="text-[10px] font-semibold">Inicio</span>
       </button>
+
       <button onclick="switchTab('hubs')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
-        <span class="text-lg">🔍</span>
-        <span class="text-[10px] font-medium">Hubs</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <span class="text-[10px] font-semibold">Hubs</span>
       </button>
+
       <button onclick="scrollToTop()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
-        <span class="text-lg">⬆️</span>
-        <span class="text-[10px] font-medium">Subir</span>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7 7 7M12 3v18"/></svg>
+        <span class="text-[10px] font-semibold">Arriba</span>
       </button>
     </div>
   </nav>
 
-  <!-- JAVASCRIPT & SUPABASE LOGIC -->
+  <!-- LÓGICA JAVASCRIPT & SUPABASE -->
   <script>
-    // Inicialización del cliente Supabase
     const SUPABASE_URL = window.SUPABASE_URL || 'https://tu-proyecto.supabase.co';
     const SUPABASE_KEY = window.SUPABASE_KEY || 'tu-anon-key';
     const supabase = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -156,7 +243,7 @@
     let currentUser = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-      await checkUserSession();
+      await checkSession();
       await loadStories();
       await loadFeed();
       subscribeRealtimeEvents();
@@ -164,16 +251,62 @@
       document.getElementById('postForm').addEventListener('submit', handlePostSubmit);
     });
 
-    async function checkUserSession() {
+    async function checkSession() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           currentUser = user;
-          document.getElementById('authBtn').innerText = 'Perfil';
+          document.getElementById('authModal').classList.add('hidden');
+          document.getElementById('menuUserLabel').innerText = user.email || 'Usuario';
+          document.getElementById('menuAuthBtn').innerText = 'Cerrar Sesión';
+        } else {
+          showAuthModal();
         }
       } catch (e) {
-        console.log("Modo visitante activo.");
+        showAuthModal();
       }
+    }
+
+    function showAuthModal() {
+      document.getElementById('authModal').classList.remove('hidden');
+    }
+
+    function enterAsGuest() {
+      currentUser = null;
+      document.getElementById('authModal').classList.add('hidden');
+      document.getElementById('postFormContainer').classList.add('hidden');
+      document.getElementById('guestNotice').classList.remove('hidden');
+      document.getElementById('menuUserLabel').innerText = 'Invitado (Solo Vista)';
+      document.getElementById('menuAuthBtn').innerText = 'Iniciar Sesión';
+    }
+
+    function handleLoginSubmit() {
+      alert("Redirigiendo al inicio de sesión de Supabase Auth...");
+    }
+
+    function logoutOrLogin() {
+      if (currentUser) {
+        supabase.auth.signOut();
+        location.reload();
+      } else {
+        showAuthModal();
+      }
+    }
+
+    function toggleSettingsMenu() {
+      document.getElementById('settingsMenu').classList.toggle('hidden');
+    }
+
+    function setTheme(mode) {
+      if (mode === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    function togglePrivateProfile(checked) {
+      console.log("Privacidad de perfil cambiada:", checked);
     }
 
     function switchTab(tab) {
@@ -185,18 +318,18 @@
       if (tab === 'feed') {
         feedTab.classList.remove('hidden');
         hubsTab.classList.add('hidden');
-        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition";
-        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition";
+        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition flex items-center justify-center gap-2";
+        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2";
       } else {
         feedTab.classList.add('hidden');
         hubsTab.classList.remove('hidden');
-        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition";
-        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition";
+        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition flex items-center justify-center gap-2";
+        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-2";
       }
     }
 
-    // GESTIÓN DE HISTORIAS
     function triggerStoryUpload() {
+      if (!currentUser) return alert("Debes iniciar sesión para compartir estados.");
       document.getElementById('storyFileInput').click();
     }
 
@@ -210,10 +343,10 @@
 
       let baseHTML = `
         <div class="flex-shrink-0 text-center cursor-pointer group" onclick="triggerStoryUpload()">
-          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-xl transition">
-            ⚡
+          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-blue-400 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           </div>
-          <span class="text-xs text-slate-400 mt-1 block group-hover:text-slate-200">Tu estado</span>
+          <span class="text-xs text-slate-400 mt-1 block">Añadir</span>
           <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(this.files[0])">
         </div>
       `;
@@ -222,7 +355,7 @@
         stories.forEach(s => {
           baseHTML += `
             <div class="flex-shrink-0 text-center cursor-pointer">
-              <div class="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600">
+              <div class="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-blue-500 via-indigo-500 to-purple-600">
                 <img src="${s.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="w-full h-full rounded-full object-cover border-2 border-slate-900">
               </div>
               <span class="text-xs text-slate-400 mt-1 block max-w-[60px] truncate">${s.profiles?.username || 'Usuario'}</span>
@@ -234,14 +367,11 @@
     }
 
     async function uploadStory(file) {
-      if (!file) return;
-      if (!currentUser) return alert("Inicia sesión para agregar un estado.");
-
+      if (!file || !currentUser) return;
       const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
-      const { error } = await supabase.storage.from('stories').upload(filePath, file);
-      if (error) return alert("Error al subir el archivo.");
-
+      await supabase.storage.from('stories').upload(filePath, file);
       const { data } = supabase.storage.from('stories').getPublicUrl(filePath);
+
       await supabase.from('stories').insert([{
         user_id: currentUser.id,
         media_url: data.publicUrl,
@@ -251,7 +381,6 @@
       loadStories();
     }
 
-    // GESTIÓN DE PUBLICACIONES (FEED)
     function handleImagePreview(input) {
       if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -276,7 +405,7 @@
         .order('created_at', { ascending: false });
 
       if (!posts || posts.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No hay publicaciones todavía. ¡Sé el primero en compartir algo!</div>`;
+        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No hay publicaciones aún.</div>`;
         return;
       }
 
@@ -285,24 +414,21 @@
         const likesCount = post.post_likes?.length || 0;
 
         return `
-          <article class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-md">
+          <article class="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 shadow-md">
             <div class="flex items-center gap-3 mb-3">
               <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-full object-cover border border-slate-700">
               <div>
-                <div class="flex items-center gap-2">
-                  <h4 class="text-sm font-semibold text-slate-100">${post.profiles?.username || 'Usuario'}</h4>
-                  ${post.is_news ? '<span class="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.5 rounded">📰 NOTICIA</span>' : ''}
-                </div>
+                <h4 class="text-sm font-semibold text-white">${post.profiles?.username || 'Usuario'}</h4>
                 <span class="text-xs text-slate-500">@${post.profiles?.handle || 'usuario'}</span>
               </div>
             </div>
 
             ${post.content ? `<p class="text-sm text-slate-200 mb-3 whitespace-pre-line">${post.content}</p>` : ''}
-            ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-lg mb-3 border border-slate-700/80 max-h-96 object-cover">` : ''}
+            ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-xl mb-3 border border-slate-700/80 max-h-96 object-cover">` : ''}
 
             <div class="flex items-center gap-4 pt-2 border-t border-slate-700/50">
               <button onclick="toggleLike('${post.id}', ${isLiked})" class="flex items-center gap-1.5 text-xs font-semibold ${isLiked ? 'text-red-500' : 'text-slate-400 hover:text-slate-200'} transition">
-                <span>${isLiked ? '❤️' : '🤍'}</span>
+                <svg class="w-4 h-4 ${isLiked ? 'fill-current' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-1.414-6.364 4.5 4.5 0 00-6.364 0L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                 <span>${likesCount}</span>
               </button>
             </div>
@@ -313,7 +439,7 @@
 
     async function handlePostSubmit(e) {
       e.preventDefault();
-      if (!currentUser) return alert("Inicia sesión para publicar.");
+      if (!currentUser) return alert("Debes iniciar sesión para publicar.");
 
       const input = document.getElementById('postInput');
       const fileInput = document.getElementById('imageInput');
@@ -342,7 +468,7 @@
     }
 
     async function toggleLike(postId, isLiked) {
-      if (!currentUser) return alert("Inicia sesión para dar Me Gusta.");
+      if (!currentUser) return alert("Inicia sesión para reaccionar.");
       if (isLiked) {
         await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
       } else {
@@ -357,10 +483,6 @@
         .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadFeed())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => loadStories())
         .subscribe();
-    }
-
-    function handleAuthAction() {
-      alert("Redirigiendo al sistema de inicio de sesión de Supabase Auth...");
     }
 
     function scrollToTop() {
