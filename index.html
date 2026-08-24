@@ -1,226 +1,225 @@
-// ==========================================
-// ESTADO Y VARIABLES GLOBALES 🌐
-// ==========================================
-let currentUser = null;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hype - Inicio</title>
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; padding: 16px; max-width: 600px; margin: 0 auto; }
+    
+    /* Historias */
+    .stories-bar { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 20px; border-bottom: 1px solid #334155; }
+    .stories-bar::-webkit-scrollbar { display: none; }
+    .story-item { text-align: center; flex-shrink: 0; cursor: pointer; }
+    .story-avatar { width: 56px; height: 56px; border-radius: 50%; padding: 2px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+    .story-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #0f172a; }
+    .story-username { font-size: 11px; color: #94a3b8; margin-top: 4px; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    /* Crear Publicación */
+    .create-post { background: #1e293b; padding: 14px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 20px; }
+    .create-post textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #fff; padding: 10px; resize: none; outline: none; margin-bottom: 10px; }
+    .post-actions { display: flex; justify-content: space-between; align-items: center; }
+    .post-actions input[type="file"] { color: #94a3b8; font-size: 12px; }
+    .btn-submit { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    
+    /* Posts Feed */
+    .post-card { background: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155; }
+    .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .post-user-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .post-user-name { font-size: 14px; font-weight: 600; color: #f8fafc; margin: 0; }
+    .post-user-handle { font-size: 12px; color: #64748b; }
+    .post-badge { font-size: 10px; background: #2563eb; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+    .post-content { font-size: 14px; color: #e2e8f0; margin-bottom: 12px; line-height: 1.4; }
+    .post-image { width: 100%; border-radius: 8px; margin-bottom: 12px; max-height: 380px; object-fit: cover; }
+    .post-footer { display: flex; gap: 16px; padding-top: 8px; border-top: 1px solid #334155; }
+    .btn-like { background: none; border: none; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  </style>
+</head>
+<body>
 
-// ==========================================
-// INICIALIZACIÓN Y CONFIGURACIÓN 🚀
-// ==========================================
-document.addEventListener('DOMContentLoaded', async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  currentUser = user;
-
-  await loadStories();
-  await loadFeed();
-  subscribeRealtime();
-
-  const postForm = document.getElementById('postForm') || document.querySelector('form');
-  if (postForm) {
-    postForm.addEventListener('submit', handlePostSubmit);
-  }
-});
-
-// ==========================================
-// SECCIÓN DE ESTADOS / HISTORIAS ⏱️
-// ==========================================
-async function loadStories() {
-  const container = document.getElementById('storiesContainer');
-  if (!container) return;
-
-  const { data: stories, error } = await supabase
-    .from('stories')
-    .select('*, profiles(username, avatar_url)')
-    .gte('expires_at', new Date().toISOString())
-    .order('created_at', { ascending: false });
-
-  if (error) return console.error('Error cargando historias:', error);
-
-  let html = `
-    <div style="text-align: center; flex-shrink: 0; cursor: pointer;" onclick="document.getElementById('storyFileInput').click()">
-      <div style="width: 58px; height: 58px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; border: 2px dashed #64748b; font-size: 20px;">
-        ➕
-      </div>
-      <p style="font-size: 11px; margin-top: 4px; color: #94a3b8;">Tu estado</p>
+  <!-- 1. BARRA DE ESTADOS / HISTORIAS -->
+  <div class="stories-bar" id="storiesContainer">
+    <div class="story-item" onclick="document.getElementById('storyFileInput').click()">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; border: 2px dashed #64748b; font-size: 20px;">➕</div>
+      <p class="story-username">Tu estado</p>
       <input type="file" id="storyFileInput" accept="image/*,video/*" style="display: none;" onchange="uploadStory(this.files[0])">
     </div>
-  `;
+  </div>
 
-  html += stories.map(story => `
-    <div onclick="openStoryModal('${story.media_url}')" style="cursor: pointer; text-align: center; flex-shrink: 0;">
-      <div style="width: 58px; height: 58px; border-radius: 50%; padding: 2px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);">
-        <img src="${story.profiles?.avatar_url || 'https://via.placeholder.com/150'}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 2px solid #0f172a;">
-      </div>
-      <p style="font-size: 11px; margin-top: 4px; color: #94a3b8; max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-        ${story.profiles?.username || 'Usuario'}
-      </p>
+  <!-- 2. FORMULARIO PARA PUBLICAR -->
+  <form class="create-post" id="postForm">
+    <textarea id="postInput" rows="3" placeholder="¿Qué está pasando?"></textarea>
+    <div class="post-actions">
+      <input type="file" id="imageInput" accept="image/*">
+      <button type="submit" class="btn-submit">Publicar</button>
     </div>
-  `).join('');
+  </form>
 
-  container.innerHTML = html;
-}
+  <!-- 3. FEED DE NOTICIAS Y PUBLICACIONES -->
+  <div id="feedContainer"></div>
 
-async function uploadStory(file) {
-  if (!file || !currentUser) return;
+  <!-- JAVASCRIPT INTEGRADO -->
+  <script>
+    // Inicialización del cliente Supabase (Reemplaza con tus variables)
+    // const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
+    // const SUPABASE_KEY = 'tu-anon-key';
+    // const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const fileExt = file.name.split('.').pop();
-  const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
+    let currentUser = null;
 
-  const { error: uploadError } = await supabase.storage.from('stories').upload(filePath, file);
-  if (uploadError) return alert('Error al subir historia');
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) currentUser = user;
 
-  const { data } = supabase.storage.from('stories').getPublicUrl(filePath);
+      await loadStories();
+      await loadFeed();
+      subscribeRealtime();
 
-  await supabase.from('stories').insert([{
-    user_id: currentUser.id,
-    media_url: data.publicUrl,
-    type: file.type.includes('video') ? 'video' : 'image'
-  }]);
+      document.getElementById('postForm').addEventListener('submit', handlePostSubmit);
+    });
 
-  loadStories();
-}
+    // Cargar Historias
+    async function loadStories() {
+      const container = document.getElementById('storiesContainer');
+      const { data: stories } = await supabase
+        .from('stories')
+        .select('*, profiles(username, avatar_url)')
+        .gte('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
 
-// ==========================================
-// SECCIÓN DE INICIO / FEED Y NOTICIAS 📰
-// ==========================================
-async function loadFeed() {
-  const container = document.getElementById('feedContainer') || document.getElementById('chatContainer');
-  if (!container) return;
+      let html = `
+        <div class="story-item" onclick="document.getElementById('storyFileInput').click()">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; border: 2px dashed #64748b; font-size: 20px;">➕</div>
+          <p class="story-username">Tu estado</p>
+          <input type="file" id="storyFileInput" accept="image/*,video/*" style="display: none;" onchange="uploadStory(this.files[0])">
+        </div>
+      `;
 
-  const { data: posts, error } = await supabase
-    .from('posts')
-    .select('*, profiles(username, avatar_url, handle), post_likes(user_id), post_comments(*, profiles(username))')
-    .order('created_at', { ascending: false });
+      if (stories) {
+        stories.forEach(story => {
+          html += `
+            <div class="story-item">
+              <div class="story-avatar">
+                <img src="${story.profiles?.avatar_url || 'https://via.placeholder.com/150'}">
+              </div>
+              <p class="story-username">${story.profiles?.username || 'Usuario'}</p>
+            </div>
+          `;
+        });
+      }
+      container.innerHTML = html;
+    }
 
-  if (error) return console.error('Error cargando feed:', error);
+    // Subir Estado
+    async function uploadStory(file) {
+      if (!file || !currentUser) return alert('Debes iniciar sesión para publicar un estado');
+      const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
+      
+      const { error } = await supabase.storage.from('stories').upload(filePath, file);
+      if (error) return alert('Error al subir el archivo');
 
-  container.innerHTML = posts.map(post => {
-    const isLiked = post.post_likes?.some(like => like.user_id === currentUser.id);
-    const likesCount = post.post_likes?.length || 0;
-    const commentsCount = post.post_comments?.length || 0;
-    const timeAgo = new Date(post.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const { data } = supabase.storage.from('stories').getPublicUrl(filePath);
+      await supabase.from('stories').insert([{
+        user_id: currentUser.id,
+        media_url: data.publicUrl,
+        type: file.type.includes('video') ? 'video' : 'image'
+      }]);
 
-    return `
-      <div style="background: #1e293b; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #334155;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" style="width: 42px; height: 42px; border-radius: 50%; object-fit: cover;">
-            <div>
-              <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: #f8fafc;">
-                ${post.profiles?.username || 'Usuario'} 
-                ${post.is_news ? '<span style="font-size: 10px; background: #2563eb; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">📰 NOTICIA</span>' : ''}
-              </h4>
-              <span style="font-size: 12px; color: #64748b;">@${post.profiles?.handle || 'usuario'} • ${timeAgo}</span>
+      loadStories();
+    }
+
+    // Cargar Feed / Publicaciones
+    async function loadFeed() {
+      const container = document.getElementById('feedContainer');
+      const { data: posts } = await supabase
+        .from('posts')
+        .select('*, profiles(username, avatar_url, handle), post_likes(user_id)')
+        .order('created_at', { ascending: false });
+
+      if (!posts) return;
+
+      container.innerHTML = posts.map(post => {
+        const isLiked = currentUser ? post.post_likes?.some(l => l.user_id === currentUser.id) : false;
+        const likesCount = post.post_likes?.length || 0;
+        const username = post.profiles?.username || 'Usuario';
+        const handle = post.profiles?.handle || 'usuario';
+
+        return `
+          <div class="post-card">
+            <div class="post-header">
+              <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="post-user-img">
+              <div>
+                <h4 class="post-user-name">${username} ${post.is_news ? '<span class="post-badge">📰 NOTICIA</span>' : ''}</h4>
+                <span class="post-user-handle">@${handle}</span>
+              </div>
+            </div>
+
+            ${post.content ? `<p class="post-content">${post.content}</p>` : ''}
+            ${post.image_url ? `<img src="${post.image_url}" class="post-image">` : ''}
+
+            <div class="post-footer">
+              <button onclick="toggleLike('${post.id}', ${isLiked})" class="btn-like" style="color: ${isLiked ? '#ef4444' : '#94a3b8'}">
+                ${isLiked ? '❤️' : '🤍'} <span>${likesCount}</span>
+              </button>
             </div>
           </div>
-        </div>
+        `;
+      }).join('');
+    }
 
-        ${post.content ? `<p style="margin: 0 0 12px 0; font-size: 14px; color: #e2e8f0; line-height: 1.5;">${post.content}</p>` : ''}
-        ${post.image_url ? `<img src="${post.image_url}" style="width: 100%; border-radius: 8px; margin-bottom: 12px; max-height: 400px; object-fit: cover;">` : ''}
+    // Enviar Publicación
+    async function handlePostSubmit(e) {
+      e.preventDefault();
+      if (!currentUser) return alert('Debes iniciar sesión para publicar');
 
-        <div style="display: flex; align-items: center; gap: 20px; padding-top: 10px; border-top: 1px solid #334155;">
-          <button onclick="toggleLike('${post.id}', ${isLiked})" style="background: none; border: none; color: ${isLiked ? '#ef4444' : '#94a3b8'}; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-            ${isLiked ? '❤️' : '🤍'} <span>${likesCount}</span>
-          </button>
-          <button onclick="toggleCommentsVisibility('${post.id}')" style="background: none; border: none; color: #94a3b8; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600;">
-            💬 <span>${commentsCount}</span>
-          </button>
-        </div>
+      const input = document.getElementById('postInput');
+      const fileInput = document.getElementById('imageInput');
+      const content = input.value.trim();
+      const file = fileInput.files[0];
 
-        <!-- Seccion de comentarios -->
-        <div id="comments-${post.id}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1e293b;">
-          <div style="max-height: 150px; overflow-y: auto; margin-bottom: 8px;">
-            ${(post.post_comments || []).map(c => `
-              <div style="font-size: 12px; margin-bottom: 6px; color: #cbd5e1;">
-                <strong style="color: #f8fafc;">${c.profiles?.username || 'Usuario'}:</strong> ${c.content}
-              </div>
-            `).join('')}
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="input-comment-${post.id}" placeholder="Escribe un comentario..." style="flex: 1; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px;">
-            <button onclick="addComment('${post.id}')" style="background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer;">Enviar</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
+      if (!content && !file) return;
 
-async function handlePostSubmit(e) {
-  e.preventDefault();
-  const input = document.getElementById('postInput') || document.querySelector('input[type="text"]');
-  const fileInput = document.getElementById('imageInput') || document.querySelector('input[type="file"]');
+      let imageUrl = null;
+      if (file) {
+        const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
+        await supabase.storage.from('posts').upload(filePath, file);
+        const { data } = supabase.storage.from('posts').getPublicUrl(filePath);
+        imageUrl = data.publicUrl;
+      }
 
-  if (!input && !fileInput) return;
+      await supabase.from('posts').insert([{
+        user_id: currentUser.id,
+        content: content || null,
+        image_url: imageUrl
+      }]);
 
-  const content = input ? input.value.trim() : '';
-  const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+      input.value = '';
+      fileInput.value = '';
+      loadFeed();
+    }
 
-  if (!content && !file) return;
+    // Me gusta
+    async function toggleLike(postId, isLiked) {
+      if (!currentUser) return alert('Inicia sesión para interactuar');
+      if (isLiked) {
+        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+      } else {
+        await supabase.from('post_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
+      }
+      loadFeed();
+    }
 
-  let imageUrl = null;
-
-  if (file) {
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${currentUser.id}/${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage.from('posts').upload(filePath, file);
-    if (uploadError) return alert('Error al subir imagen');
-
-    const { data } = supabase.storage.from('posts').getPublicUrl(filePath);
-    imageUrl = data.publicUrl;
-  }
-
-  await supabase.from('posts').insert([{
-    user_id: currentUser.id,
-    content: content || null,
-    image_url: imageUrl
-  }]);
-
-  if (input) input.value = '';
-  if (fileInput) fileInput.value = '';
-  loadFeed();
-}
-
-async function toggleLike(postId, isLiked) {
-  if (!currentUser) return;
-
-  if (isLiked) {
-    await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
-  } else {
-    await supabase.from('post_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
-  }
-  loadFeed();
-}
-
-function toggleCommentsVisibility(postId) {
-  const el = document.getElementById(`comments-${postId}`);
-  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
-}
-
-async function addComment(postId) {
-  const input = document.getElementById(`input-comment-${postId}`);
-  if (!input || !input.value.trim()) return;
-
-  await supabase.from('post_comments').insert([{
-    post_id: postId,
-    user_id: currentUser.id,
-    content: input.value.trim()
-  }]);
-
-  input.value = '';
-  loadFeed();
-}
-
-// ==========================================
-// SUSCRIPCIÓN EN TIEMPO REAL ⚡
-// ==========================================
-function subscribeRealtime() {
-  supabase
-    .channel('public:feed_changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadFeed())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => loadStories())
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, () => loadFeed())
-    .subscribe();
-}
-  
+    // Cambios en tiempo real
+    function subscribeRealtime() {
+      supabase
+        .channel('public:realtime_feed')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadFeed())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => loadStories())
+        .subscribe();
+    }
+  </script>
+</body>
+</html>
