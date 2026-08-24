@@ -3,54 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype App</title>
+  <title>Hype App - Chat Real</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-950 text-white font-sans flex flex-col h-screen">
 
-  <!-- Header -->
   <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-    <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE</h1>
-    <span class="text-xs bg-slate-800 px-3 py-1 rounded-full text-slate-400">Modo Pruebas</span>
+    <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE CHAT</h1>
+    <span class="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold">🟢 En Vivo</span>
   </header>
 
-  <!-- Content / Chat Layout -->
-  <div class="flex-1 flex overflow-hidden">
-    
-    <!-- Servidores / Canales -->
-    <aside class="w-20 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-4 gap-3">
-      <div class="w-12 h-12 bg-cyan-500 rounded-2xl flex items-center justify-center font-bold text-slate-950 cursor-pointer shadow-lg shadow-cyan-500/20">H</div>
-      <div class="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center justify-center cursor-pointer text-slate-400 transition-all">+</div>
-    </aside>
+  <div class="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+    <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-3">
+      <div class="text-slate-500 text-center text-xs my-4">Cargando mensajes del servidor...</div>
+    </div>
 
-    <!-- Chat Principal -->
-    <main class="flex-1 flex flex-col bg-slate-950">
-      <div class="p-3 border-b border-slate-800 bg-slate-900/50 font-semibold text-slate-300">
-        # chat-general
-      </div>
-
-      <div class="flex-1 p-4 overflow-y-auto space-y-4">
-        <div class="flex gap-3 items-start bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">
-          <div class="w-9 h-9 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-slate-950">C</div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-sm text-cyan-400">Carlos (Mod)</span>
-              <span class="text-[10px] text-slate-500">10:45 PM</span>
-            </div>
-            <p class="text-sm text-slate-300 mt-1">¡Bienvenidos a Hype! Cero spam de IA, puro contenido real y proyectos.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="p-4 bg-slate-900/40 border-t border-slate-800">
-        <div class="flex gap-2">
-          <input type="text" placeholder="Enviar mensaje a #chat-general..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500 text-white placeholder-slate-500">
-          <button class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition-all">Enviar</button>
-        </div>
-      </div>
-    </main>
-
+    <form id="chat-form" class="p-4 bg-slate-900 border-t border-slate-800 flex gap-2">
+      <input 
+        id="username-input" 
+        type="text" 
+        placeholder="Tu apodo" 
+        class="w-28 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
+        required
+      />
+      <input 
+        id="message-input" 
+        type="text" 
+        placeholder="Escribe un mensaje real..." 
+        class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500"
+        required
+      />
+      <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">
+        Enviar
+      </button>
+    </form>
   </div>
 
+  <script>
+    const SUPABASE_URL = "https://vqxfczrtjgwpszdvksuy.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGZjenJ0amd3cHN6ZHZrc3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MjgxNDYsImV4cCI6MjEwMzEwNDE0Nn0.CwfcwVVxq0rkvM6A_7j5wJDEP9HH8weIimsJGpC6iuk";
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const messagesContainer = document.getElementById('messages-container');
+    const chatForm = document.getElementById('chat-form');
+    const messageInput = document.getElementById('message-input');
+    const usernameInput = document.getElementById('username-input');
+
+    if (localStorage.getItem('hype_user')) {
+      usernameInput.value = localStorage.getItem('hype_user');
+    }
+
+    function renderMessage(msg) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'flex gap-3 items-start bg-slate-900 p-3 rounded-xl border border-slate-800';
+      msgDiv.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-slate-950 text-xs">
+          ${(msg.username || 'U').charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-xs text-cyan-400">${msg.username || 'Usuario'}</span>
+            <span class="text-[10px] text-slate-500">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+          </div>
+          <p class="text-sm text-slate-200 mt-1">${msg.content}</p>
+        </div>
+      `;
+      messagesContainer.appendChild(msgDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    async function loadMessages() {
+      const { data, error } = await supabaseClient
+        .from('messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      messagesContainer.innerHTML = '';
+      if (data && data.length > 0) {
+        data.forEach(renderMessage);
+      } else {
+        messagesContainer.innerHTML = '<div class="text-slate-500 text-center text-xs my-4">No hay mensajes aún. ¡Escribe el primero!</div>';
+      }
+    }
+
+    supabaseClient
+      .channel('public:messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        renderMessage(payload.new);
+      })
+      .subscribe();
+
+    chatForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = messageInput.value.trim();
+      const username = usernameInput.value.trim();
+
+      if (!content || !username) return;
+
+      localStorage.setItem('hype_user', username);
+
+      const { error } = await supabaseClient
+        .from('messages')
+        .insert([{ content, username }]);
+
+      if (error) {
+        alert('Error: Asegúrate de haber ejecutado el script SQL en Supabase.');
+      } else {
+        messageInput.value = '';
+      }
+    });
+
+    loadMessages();
+  </script>
 </body>
 </html>
