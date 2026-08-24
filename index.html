@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hype App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white font-sans flex flex-col h-screen">
+
+  <!-- Header -->
+  <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+    <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE</h1>
+    <span class="text-xs bg-slate-800 px-3 py-1 rounded-full text-slate-400">Modo Pruebas</span>
+  </header>
+
+  <!-- Content / Chat Layout -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Servidores / Canales -->
+    <aside class="w-20 bg-slate-900 border-r border-slate-800 flex flex-col items-center py-4 gap-3">
+      <div class="w-12 h-12 bg-cyan-500 rounded-2xl flex items-center justify-center font-bold text-slate-950 cursor-pointer shadow-lg shadow-cyan-500/20">H</div>
+      <div class="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-2xl flex items-center justify-center cursor-pointer text-slate-400 transition-all">+</div>
+    </aside>
+
+    <!-- Chat Principal -->
+    <main class="flex-1 flex flex-col bg-slate-950">
+      <div class="p-3 border-b border-slate-800 bg-slate-900/50 font-semibold text-slate-300">
+        # chat-general
+      </div>
+
+      <div class="flex-1 p-4 overflow-y-auto space-y-4">
+        <div class="flex gap-3 items-start bg-slate-900/60 p-3 rounded-xl border border-slate-800/50">
+          <div class="w-9 h-9 rounded-full bg-cyan-500 flex items-center justify-center font-bold text-slate-950">C</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm text-cyan-400">Carlos (Mod)</span>
+              <span class="text-[10px] text-slate-500">10:45 PM</span>
+            </div>
+            <p class="text-sm text-slate-300 mt-1">¡Bienvenidos a Hype! Cero spam de IA, puro contenido real y proyectos.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-900/40 border-t border-slate-800">
+        <div class="flex gap-2">
+          <input type="text" placeholder="Enviar mensaje a #chat-general..." class="flex-1 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500 text-white placeholder-slate-500">
+          <button class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2.5 rounded-xl text-sm transition-all">Enviar</button>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+</body>
+</html>
