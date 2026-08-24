@@ -1,1012 +1,371 @@
- <!DOCTYPE html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype App - Chat, Amigos & Multimedia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Hype App</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8'
+            },
+            dark: {
+              bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f8fafc', muted: '#94a3b8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Scrollbar personalizado para paneles */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    /* Ocultar barra de desplazamiento manteniendo funcionalidad scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-950 text-white font-sans flex flex-col h-screen overflow-hidden">
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 selection:bg-blue-500 selection:text-white antialiased">
 
-  <!-- HEADER / BARRA SUPERIOR -->
-  <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center z-10">
-    <div class="flex items-center gap-4">
-      <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider flex items-center gap-1.5">
-        ⚡ HYPE
-      </h1>
-      <nav id="app-nav" class="hidden flex gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
-        <button id="nav-chat-btn" class="px-3 py-1 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition-all">Chat Global</button>
-        <button id="nav-friends-btn" class="px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
-          Amigos
-          <span id="friends-badge" class="hidden bg-cyan-500 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">0</span>
+  <!-- ENCABEZADO / NAVBAR TOP -->
+  <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+    <div class="max-w-2xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl font-black bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">HYPE</span>
+        <span class="text-[10px] bg-blue-500/10 text-blue-400 font-bold px-2 py-0.5 rounded-full border border-blue-500/20">PRO</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="authBtn" onclick="handleAuthAction()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg transition">
+          Iniciar Sesión
         </button>
-      </nav>
-    </div>
-
-    <div id="user-bar" class="hidden flex items-center gap-3">
-      <button id="open-profile-btn" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-700 transition-all">
-        <img id="nav-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-6 h-6 rounded-full object-cover" alt="Avatar">
-        <span id="user-display" class="text-xs font-medium text-slate-200"></span>
-      </button>
-      <button id="logout-btn" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1.5 rounded-xl font-bold transition-all">Salir</button>
+      </div>
     </div>
   </header>
 
-  <!-- PANTALLA 1: LOGIN / REGISTRO -->
-  <div id="auth-screen" class="flex-1 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm space-y-4 text-center shadow-2xl">
-      <h2 class="text-xl font-bold text-white">Entrar a Hype</h2>
-      <p class="text-xs text-slate-400">Conéctate para chatear, enviar audios y gifs con amigos</p>
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="max-w-2xl mx-auto p-4 space-y-6">
 
-      <button id="google-login-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-all">
-        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1H12v3.7h5.35c-.23 1.22-1.33 3.5-5.35 3.5c-3.22 0-5.85-2.67-5.85-5.95s2.63-5.95 5.85-5.95c1.83 0 3.06.78 3.76 1.45l2.9-2.82C18.8 3.38 15.7 2 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.77 0 9.6-4.06 9.6-9.77c0-.66-.07-1.13-.25-1.13z"/></svg>
-        Continuar con Google
-      </button>
-
-      <div class="flex items-center gap-2 my-2">
-        <div class="flex-1 h-px bg-slate-800"></div>
-        <span class="text-[10px] text-slate-500 uppercase">o con correo</span>
-        <div class="flex-1 h-px bg-slate-800"></div>
+    <!-- 1. SECCIÓN DE ESTADOS / HISTORIAS (24H) -->
+    <section class="border-b border-slate-800 pb-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estados / Historias</h2>
+        <span class="text-[10px] text-slate-500">Efímero 24h</span>
       </div>
-
-      <form id="email-auth-form" class="space-y-3 text-left">
-        <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold">Correo</label>
-          <input id="auth-email" type="email" required placeholder="tu@correo.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
-        </div>
-        <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold">Contraseña</label>
-          <input id="auth-password" type="password" required placeholder="••••••••" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
-        </div>
-        <div class="flex gap-2 pt-2">
-          <button id="login-btn" type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Ingresar</button>
-          <button id="signup-btn" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700 transition-all">Registrar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- PANTALLA 2: CHAT GLOBAL -->
-  <div id="chat-screen" class="hidden flex-1 flex flex-col bg-slate-950 overflow-hidden">
-    <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-3">
-      <div class="text-slate-500 text-center text-xs my-4">Cargando mensajes...</div>
-    </div>
-
-    <form id="chat-form" class="p-4 bg-slate-900 border-t border-slate-800 flex gap-2">
-      <input id="message-input" type="text" placeholder="Escribe en el chat global..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 text-white" required />
-      <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">Enviar</button>
-    </form>
-  </div>
-
-  <!-- PANTALLA 3: SECCIÓN DE AMIGOS & CHAT PRIVADO -->
-  <div id="friends-screen" class="hidden flex-1 flex flex-col md:flex-row overflow-hidden">
-    <!-- Panel Izquierdo: Lista de Amigos y Solicitudes -->
-    <div id="friends-sidebar" class="w-full md:w-80 bg-slate-900/50 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto">
-      <!-- Añadir Amigo -->
-      <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-2">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Añadir Amigo</h3>
-        <form id="add-friend-form" class="flex gap-2">
-          <div class="relative flex-1">
-            <span class="absolute left-2.5 top-2 text-slate-500 text-xs">@</span>
-            <input id="add-friend-handle" type="text" placeholder="handle" required class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
+      <div id="storiesContainer" class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+        <!-- Tarjeta para crear Historia -->
+        <div class="flex-shrink-0 text-center cursor-pointer group" onclick="triggerStoryUpload()">
+          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-xl transition">
+            ⚡
           </div>
-          <button type="submit" class="bg-cyan-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-cyan-400 transition-all">Añadir</button>
+          <span class="text-xs text-slate-400 mt-1 block group-hover:text-slate-200">Tu estado</span>
+          <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(this.files[0])">
+        </div>
+        <!-- Historias dinámicas -->
+      </div>
+    </section>
+
+    <!-- 2. NAVEGACIÓN POR PESTAÑAS (TABS) -->
+    <div class="flex border-b border-slate-800 text-sm font-semibold">
+      <button id="tabFeedBtn" onclick="switchTab('feed')" class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition">
+        🚀 Feed Global
+      </button>
+      <button id="tabHubsBtn" onclick="switchTab('hubs')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+        🌐 Hubs & Comunidades
+      </button>
+    </div>
+
+    <!-- CONTENIDO PESTAÑA 1: FEED & CREACIÓN -->
+    <div id="tabContentFeed" class="space-y-6">
+      
+      <!-- FORMULARIO DE CREACIÓN DE PUBLICACIÓN -->
+      <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg">
+        <form id="postForm" class="space-y-3">
+          <textarea id="postInput" rows="3" placeholder="¿Qué proyecto o idea estás construyendo hoy?" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
+          
+          <div id="imagePreviewContainer" class="hidden relative">
+            <img id="imagePreview" src="" class="max-h-48 rounded-lg object-cover border border-slate-700">
+            <button type="button" onclick="clearImageSelection()" class="absolute top-2 right-2 bg-slate-900/80 text-white p-1 rounded-full text-xs">✕</button>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-700/50">
+            <label class="cursor-pointer flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition">
+              🖼️ <span>Adjuntar Imagen</span>
+              <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImagePreview(this)">
+            </label>
+
+            <button type="submit" id="btnPublish" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2 rounded-lg transition flex items-center gap-2">
+              <span>Publicar</span>
+            </button>
+          </div>
         </form>
       </div>
 
-      <!-- Solicitudes Pendientes -->
-      <div id="requests-section" class="hidden space-y-2">
-        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Solicitudes Pendientes</h3>
-        <div id="requests-list" class="space-y-2"></div>
-      </div>
-
-      <!-- Lista de Amigos -->
-      <div class="flex-1 space-y-2">
-        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Mis Amigos (<span id="friends-count">0</span>)</h3>
-        <div id="friends-list" class="space-y-1.5"></div>
+      <!-- ALIMENTACIÓN DE CONTENIDO / FEED DE POSTS -->
+      <div id="feedContainer" class="space-y-4">
+        <!-- Carga de Posts dinámicos -->
       </div>
     </div>
 
-    <!-- Panel Derecho: Chat Privado Multimedia -->
-    <div id="private-chat-area" class="flex-1 flex flex-col bg-slate-950 relative">
-      <div id="no-friend-selected" class="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500">
-        <p class="text-4xl mb-3">💬</p>
-        <p class="text-sm font-semibold">Selecciona un amigo para iniciar la conversación</p>
-      </div>
-
-      <div id="active-dm-container" class="hidden flex-1 flex flex-col h-full overflow-hidden">
-        <!-- Header Chat Privado -->
-        <div class="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <img id="dm-friend-avatar" src="" class="w-8 h-8 rounded-full object-cover border border-slate-700">
-            <div>
-              <p id="dm-friend-name" class="text-xs font-bold text-white"></p>
-              <p id="dm-friend-handle" class="text-[10px] text-cyan-400"></p>
-            </div>
-          </div>
+    <!-- CONTENIDO PESTAÑA 2: HUBS & COMUNIDADES -->
+    <div id="tabContentHubs" class="hidden space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <h3 class="font-bold text-blue-400">🔥 Proyectos & Startups</h3>
+          <p class="text-xs text-slate-400 mt-1">Comparte avances, demos y recibe retroalimentación.</p>
         </div>
-
-        <!-- Mensajes del DM -->
-        <div id="dm-messages-container" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
-
-        <!-- POPUP SELECTOR DE EMOJIS COMPLETO -->
-        <div id="emoji-picker-popup" class="hidden absolute bottom-16 left-4 right-4 md:right-auto md:w-96 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl z-30">
-          <!-- Pestañas de categorías -->
-          <div id="emoji-categories-nav" class="flex gap-1 overflow-x-auto pb-2 mb-2 border-b border-slate-800 text-[10px] font-bold text-slate-400"></div>
-          <!-- Grid de Emojis -->
-          <div id="emoji-grid" class="grid grid-cols-7 gap-1 max-h-48 overflow-y-auto text-xl"></div>
-        </div>
-
-        <!-- POPUP SELECTOR DE GIFS (TENOR) -->
-        <div id="gif-picker-popup" class="hidden absolute bottom-16 left-4 right-4 md:right-auto md:w-96 bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl z-30 space-y-2">
-          <div class="flex justify-between items-center">
-            <input id="gif-search-input" type="text" placeholder="Buscar GIFs en Tenor..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
-          </div>
-          <div id="gif-results" class="grid grid-cols-3 gap-1.5 max-h-52 overflow-y-auto">
-            <div class="col-span-3 text-center text-xs text-slate-500 py-6">Cargando GIFs...</div>
-          </div>
-        </div>
-
-        <!-- Barra Inferior de Entrada y Botones Multimedia -->
-        <div class="p-3 bg-slate-900 border-t border-slate-800 relative">
-          <!-- Grabación de Nota de Voz -->
-          <div id="recording-bar" class="hidden flex items-center justify-between bg-red-950/80 border border-red-500/40 p-2 rounded-xl mb-2 text-xs">
-            <div class="flex items-center gap-2 text-red-400 font-semibold">
-              <span class="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping"></span>
-              <span>Grabando audio... <strong id="recording-timer" class="text-white font-mono">0:00</strong></span>
-            </div>
-            <div class="flex gap-2">
-              <button id="cancel-record-btn" class="text-slate-400 hover:text-white font-bold px-2 py-1 rounded-lg">Cancelar</button>
-              <button id="stop-record-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold px-3 py-1 rounded-lg transition-all">Enviar Audio</button>
-            </div>
-          </div>
-
-          <form id="dm-form" class="flex items-center gap-2">
-            <button type="button" id="emoji-toggle-btn" title="Emojis" class="p-2 text-slate-400 hover:text-cyan-400 text-lg transition-all">😀</button>
-            <button type="button" id="gif-toggle-btn" title="GIFs" class="px-2 py-1 text-slate-400 hover:text-cyan-400 font-extrabold text-xs bg-slate-800 border border-slate-700 rounded-lg transition-all">GIF</button>
-            
-            <label title="Enviar foto" class="p-2 text-slate-400 hover:text-cyan-400 cursor-pointer text-lg transition-all">
-              📷
-              <input id="dm-file-input" type="file" accept="image/*" class="hidden">
-            </label>
-
-            <button type="button" id="record-audio-btn" title="Grabar nota de voz" class="p-2 text-slate-400 hover:text-red-400 text-lg transition-all">🎙️</button>
-
-            <input id="dm-input" type="text" placeholder="Escribe un mensaje privado..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 text-white">
-            
-            <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition-all">Enviar</button>
-          </form>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <h3 class="font-bold text-indigo-400">⚙️ Tech & Hardware Repair</h3>
+          <p class="text-xs text-slate-400 mt-1">Discusión técnica, diagramas y prototipado.</p>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- MODAL: EDITAR PERFIL -->
-  <div id="profile-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md space-y-4 shadow-2xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-        <h3 class="text-lg font-bold text-white">Editar Perfil</h3>
-        <button id="close-profile-btn" class="text-slate-400 hover:text-white font-bold text-lg">&times;</button>
-      </div>
+  </main>
 
-      <form id="profile-form" class="space-y-3">
-        <div class="flex items-center gap-4">
-          <img id="profile-preview-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-16 h-16 rounded-full object-cover border-2 border-cyan-500 flex-shrink-0">
-          <div class="flex-1">
-            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Foto de Perfil</label>
-            <input id="profile-file-input" type="file" accept="image/*" class="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-cyan-400 hover:file:bg-slate-700 cursor-pointer">
-          </div>
-        </div>
-
-        <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold">Nombre Visible</label>
-          <input id="profile-username" type="text" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
-        </div>
-
-        <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold">Usuario (@arroba)</label>
-          <div class="relative mt-1">
-            <span class="absolute left-3 top-2 text-slate-500 text-sm">@</span>
-            <input id="profile-handle" type="text" required class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500">
-          </div>
-        </div>
-
-        <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold">Descripción / Biografía</label>
-          <textarea id="profile-bio" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1 resize-none"></textarea>
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button type="button" id="cancel-profile-btn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700">Cancelar</button>
-          <button type="submit" id="save-profile-btn" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Guardar Cambios</button>
-        </div>
-      </form>
+  <!-- BARRA DE NAVEGACIÓN INFERIOR (MOBILE BOTTOM NAV) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-800 backdrop-blur-lg z-50">
+    <div class="max-w-2xl mx-auto flex justify-around py-2">
+      <button onclick="switchTab('feed')" class="flex flex-col items-center gap-1 text-blue-500">
+        <span class="text-lg">🏠</span>
+        <span class="text-[10px] font-medium">Inicio</span>
+      </button>
+      <button onclick="switchTab('hubs')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
+        <span class="text-lg">🔍</span>
+        <span class="text-[10px] font-medium">Hubs</span>
+      </button>
+      <button onclick="scrollToTop()" class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-200">
+        <span class="text-lg">⬆️</span>
+        <span class="text-[10px] font-medium">Subir</span>
+      </button>
     </div>
-  </div>
+  </nav>
 
+  <!-- JAVASCRIPT & SUPABASE LOGIC -->
   <script>
-    const SUPABASE_URL = "https://vqxfczrtjgwpszdvksuy.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGZjenJ0amd3cHN6ZHZrc3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MjgxNDYsImV4cCI6MjEwMzEwNDE0Nn0.CwfcwVVxq0rkvM6A_7j5wJDEP9HH8weIimsJGpC6iuk";
-    const TENOR_API_KEY = "LIVDSRZULEA7"; // Key pública de Tenor API v2
-
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Inicialización del cliente Supabase
+    const SUPABASE_URL = window.SUPABASE_URL || 'https://tu-proyecto.supabase.co';
+    const SUPABASE_KEY = window.SUPABASE_KEY || 'tu-anon-key';
+    const supabase = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
-    let currentProfile = null;
-    let selectedFile = null;
 
-    let activeFriend = null;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let recordingTimerInterval = null;
-    let recordingSeconds = 0;
+    document.addEventListener('DOMContentLoaded', async () => {
+      await checkUserSession();
+      await loadStories();
+      await loadFeed();
+      subscribeRealtimeEvents();
 
-    // CATÁLOGO EXTENSO DE EMOJIS POR CATEGORÍAS
-    const EMOJI_CATEGORIES = {
-      "😀 Caras": [
-        "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","🫠","😉","😊","😇","🥰","😍","🤩","😘","😗","😚","😙","🥲",
-        "😋","😛","😜","🤪","😝","🤑","🤗","🤭","🫢","🫣","🤫","🤔","🫡","🤐","🤨","😐","😑","😶","🫥","😏","😒","🙄",
-        "😬","🤥","🫨","😌","😔","😪","🤤","😴","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯","🤠","🥳","🥸",
-        "😎","🤓","🧐","😕","🫤","😟","🙁","😮","😯","😲","😳","🥺","🥹","😦","😧","😨","😰","😥","😢","😭","😱","😖",
-        "😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖"
-      ],
-      "👋 Gestos": [
-        "👋","🤚","🖐️","✋","🖖","🫱","🫲","🫳","🫴","👌","🤌","🤏","✌️","🤞","🫰","🤟","🤘","🤙","👈","👉","👆",
-        "🖕","👇","☝️","🫵","👍","👎","✊","👊","🤛","🤜","👏","🙌","🫶","👐","🤲","🤝","🙏","✍️","💅","🤳","💪","🦾"
-      ],
-      "❤️ Amor & Símbolos": [
-        "❤️","🩷","🧡","💛","💚","💙","🩵","💜","🤎","🖤","🩶","🤍","💔","❤️‍🔥","❤️‍🩹","❣️","💕","💞","💓","💗","💖",
-        "💘","💝","🔥","✨","🌟","💫","💥","💢","💦","💧","💤","💬","👁️‍🗨️","💯","🚫","⚠️","✅","❌","❓","❗","💬","💭"
-      ],
-      "📱 Objetos & Tech": [
-        "📱","📲","💻","⌨️","🖥️","🖨️","🖱️","🎮","🕹️","🎧","🎙️","📢","🔔","🔋","🔌","💡","🔦","📷","📸","📹","📺",
-        "📻","⏰","⏳","📡","🛸","🚀","🛠️","🎁","🎉","🎈","🏆","⚽","🏀","🎮","💸","💵","💳"
-      ],
-      "🐱 Animales": [
-        "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐻‍❄️","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🙈","🙉","🙊","🐒","🐔",
-        "🐧","🐦","🦅","🦉","🦄","🐝","🦋","🐌","🐞","🐢","🐍","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋"
-      ]
-    };
-
-    // ELEMENTOS DOM
-    const authScreen = document.getElementById('auth-screen');
-    const chatScreen = document.getElementById('chat-screen');
-    const friendsScreen = document.getElementById('friends-screen');
-    const userBar = document.getElementById('user-bar');
-    const appNav = document.getElementById('app-nav');
-    const userDisplay = document.getElementById('user-display');
-    const navAvatar = document.getElementById('nav-avatar');
-    const logoutBtn = document.getElementById('logout-btn');
-
-    const navChatBtn = document.getElementById('nav-chat-btn');
-    const navFriendsBtn = document.getElementById('nav-friends-btn');
-    const friendsBadge = document.getElementById('friends-badge');
-
-    const profileModal = document.getElementById('profile-modal');
-    const openProfileBtn = document.getElementById('open-profile-btn');
-    const closeProfileBtn = document.getElementById('close-profile-btn');
-    const cancelProfileBtn = document.getElementById('cancel-profile-btn');
-    const profileForm = document.getElementById('profile-form');
-    const saveProfileBtn = document.getElementById('save-profile-btn');
-
-    const profileFileInput = document.getElementById('profile-file-input');
-    const profilePreviewAvatar = document.getElementById('profile-preview-avatar');
-    const profileUsernameInput = document.getElementById('profile-username');
-    const profileHandleInput = document.getElementById('profile-handle');
-    const profileBioInput = document.getElementById('profile-bio');
-
-    const messagesContainer = document.getElementById('messages-container');
-
-    // ELEMENTOS CHAT PRIVADO
-    const noFriendSelected = document.getElementById('no-friend-selected');
-    const activeDmContainer = document.getElementById('active-dm-container');
-    const dmFriendAvatar = document.getElementById('dm-friend-avatar');
-    const dmFriendName = document.getElementById('dm-friend-name');
-    const dmFriendHandle = document.getElementById('dm-friend-handle');
-    const dmMessagesContainer = document.getElementById('dm-messages-container');
-    const dmInput = document.getElementById('dm-input');
-    const dmFileInput = document.getElementById('dm-file-input');
-
-    const emojiPickerPopup = document.getElementById('emoji-picker-popup');
-    const gifPickerPopup = document.getElementById('gif-picker-popup');
-    const recordingBar = document.getElementById('recording-bar');
-    const recordingTimer = document.getElementById('recording-timer');
-
-    async function checkUser() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        await loadProfile();
-        showChatTab();
-        loadFriendsData();
-      } else {
-        showAuthScreen();
-      }
-    }
-
-    async function loadProfile() {
-      if (!currentUser) return;
-
-      let { data } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single();
-
-      if (!data) {
-        const defaultUsername = currentUser.email.split('@')[0];
-        const defaultHandle = defaultUsername.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const defaultAvatar = 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
-        
-        const { data: newProfile } = await supabaseClient
-          .from('profiles')
-          .insert([{
-            id: currentUser.id,
-            email: currentUser.email,
-            username: defaultUsername,
-            handle: defaultHandle,
-            avatar_url: defaultAvatar,
-            bio: '¡Hola! Estoy usando Hype.'
-          }])
-          .select()
-          .single();
-          
-        data = newProfile;
-      }
-
-      currentProfile = data;
-
-      if (currentProfile) {
-        userDisplay.textContent = currentProfile.username || currentUser.email;
-        navAvatar.src = currentProfile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
-      }
-    }
-
-    function showAuthScreen() {
-      authScreen.classList.remove('hidden');
-      chatScreen.classList.add('hidden');
-      friendsScreen.classList.add('hidden');
-      userBar.classList.add('hidden');
-      appNav.classList.add('hidden');
-    }
-
-    function showChatTab() {
-      authScreen.classList.add('hidden');
-      chatScreen.classList.remove('hidden');
-      friendsScreen.classList.add('hidden');
-      userBar.classList.remove('hidden');
-      appNav.classList.remove('hidden');
-
-      navChatBtn.className = "px-3 py-1 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition-all";
-      navFriendsBtn.className = "px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
-      loadMessages();
-    }
-
-    function showFriendsTab() {
-      authScreen.classList.add('hidden');
-      chatScreen.classList.add('hidden');
-      friendsScreen.classList.remove('hidden');
-
-      navFriendsBtn.className = "px-3 py-1 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition-all flex items-center gap-1.5";
-      navChatBtn.className = "px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all";
-      loadFriendsData();
-    }
-
-    navChatBtn.addEventListener('click', showChatTab);
-    navFriendsBtn.addEventListener('click', showFriendsTab);
-
-    // MODAL PERFIL
-    openProfileBtn.addEventListener('click', () => {
-      if (!currentProfile) return;
-      selectedFile = null;
-      profileFileInput.value = '';
-      profilePreviewAvatar.src = currentProfile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
-      profileUsernameInput.value = currentProfile.username || '';
-      profileHandleInput.value = currentProfile.handle || '';
-      profileBioInput.value = currentProfile.bio || '';
-      profileModal.classList.remove('hidden');
+      document.getElementById('postForm').addEventListener('submit', handlePostSubmit);
     });
 
-    closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
-    cancelProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
-
-    profileFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        selectedFile = file;
-        profilePreviewAvatar.src = URL.createObjectURL(file);
-      }
-    });
-
-    profileForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      saveProfileBtn.disabled = true;
-      saveProfileBtn.textContent = 'Guardando...';
-
-      let avatarUrl = currentProfile?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
-
-      if (selectedFile) {
-        const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-
-        const { error: uploadError } = await supabaseClient
-          .storage
-          .from('avatars')
-          .upload(fileName, selectedFile, { upsert: true });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
-          avatarUrl = publicUrlData.publicUrl;
+    async function checkUserSession() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          currentUser = user;
+          document.getElementById('authBtn').innerText = 'Perfil';
         }
+      } catch (e) {
+        console.log("Modo visitante activo.");
       }
+    }
 
-      const username = profileUsernameInput.value.trim();
-      const handle = profileHandleInput.value.trim().toLowerCase().replace(/\s+/g, '');
-      const bio = profileBioInput.value.trim();
+    function switchTab(tab) {
+      const feedTab = document.getElementById('tabContentFeed');
+      const hubsTab = document.getElementById('tabContentHubs');
+      const feedBtn = document.getElementById('tabFeedBtn');
+      const hubsBtn = document.getElementById('tabHubsBtn');
 
-      const { error } = await supabaseClient
-        .from('profiles')
-        .upsert({
-          id: currentUser.id,
-          email: currentUser.email,
-          avatar_url: avatarUrl,
-          username,
-          handle,
-          bio,
-          updated_at: new Date()
-        });
-
-      saveProfileBtn.disabled = false;
-      saveProfileBtn.textContent = 'Guardar Cambios';
-
-      if (error) alert("Error al actualizar: " + error.message);
-      else {
-        await loadProfile();
-        profileModal.classList.add('hidden');
-        loadMessages();
-      }
-    });
-
-    // SISTEMA DE AMIGOS
-    document.getElementById('add-friend-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('add-friend-handle');
-      const handleTarget = input.value.trim().toLowerCase().replace('@', '');
-
-      if (!handleTarget) return;
-
-      if (handleTarget === currentProfile.handle) {
-        return alert("No puedes enviarte una solicitud a ti mismo.");
-      }
-
-      const { data: targetProfile, error: searchError } = await supabaseClient
-        .from('profiles')
-        .select('id')
-        .eq('handle', handleTarget)
-        .single();
-
-      if (searchError || !targetProfile) {
-        return alert("Usuario no encontrado. Revisa el @handle.");
-      }
-
-      const { error: friendError } = await supabaseClient
-        .from('friendships')
-        .insert([{
-          requester_id: currentUser.id,
-          receiver_id: targetProfile.id,
-          status: 'pending'
-        }]);
-
-      if (friendError) {
-        if (friendError.code === '23505') alert("Ya existe una solicitud pendiente o ya son amigos.");
-        else alert("Error: " + friendError.message);
+      if (tab === 'feed') {
+        feedTab.classList.remove('hidden');
+        hubsTab.classList.add('hidden');
+        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition";
+        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition";
       } else {
-        alert(`¡Solicitud enviada a @${handleTarget}!`);
-        input.value = '';
+        feedTab.classList.add('hidden');
+        hubsTab.classList.remove('hidden');
+        hubsBtn.className = "flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500 transition";
+        feedBtn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition";
       }
-    });
+    }
 
-    async function loadFriendsData() {
-      if (!currentUser) return;
+    // GESTIÓN DE HISTORIAS
+    function triggerStoryUpload() {
+      document.getElementById('storyFileInput').click();
+    }
 
-      const { data: requests } = await supabaseClient
-        .from('friendships')
-        .select(`
-          id,
-          requester_id,
-          profiles:requester_id (id, username, handle, avatar_url)
-        `)
-        .eq('receiver_id', currentUser.id)
-        .eq('status', 'pending');
+    async function loadStories() {
+      const container = document.getElementById('storiesContainer');
+      const { data: stories } = await supabase
+        .from('stories')
+        .select('*, profiles(username, avatar_url)')
+        .gte('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
 
-      const requestsSection = document.getElementById('requests-section');
-      const requestsList = document.getElementById('requests-list');
+      let baseHTML = `
+        <div class="flex-shrink-0 text-center cursor-pointer group" onclick="triggerStoryUpload()">
+          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-xl transition">
+            ⚡
+          </div>
+          <span class="text-xs text-slate-400 mt-1 block group-hover:text-slate-200">Tu estado</span>
+          <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(this.files[0])">
+        </div>
+      `;
 
-      if (requests && requests.length > 0) {
-        requestsSection.classList.remove('hidden');
-        friendsBadge.textContent = requests.length;
-        friendsBadge.classList.remove('hidden');
+      if (stories && stories.length > 0) {
+        stories.forEach(s => {
+          baseHTML += `
+            <div class="flex-shrink-0 text-center cursor-pointer">
+              <div class="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-600">
+                <img src="${s.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="w-full h-full rounded-full object-cover border-2 border-slate-900">
+              </div>
+              <span class="text-xs text-slate-400 mt-1 block max-w-[60px] truncate">${s.profiles?.username || 'Usuario'}</span>
+            </div>
+          `;
+        });
+      }
+      container.innerHTML = baseHTML;
+    }
 
-        requestsList.innerHTML = requests.map(r => `
-          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-xl">
-            <div class="flex items-center gap-2 overflow-hidden">
-              <img src="${r.profiles.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-7 h-7 rounded-full object-cover">
-              <div class="truncate">
-                <p class="text-xs font-bold text-white truncate">${r.profiles.username}</p>
-                <p class="text-[9px] text-slate-500 truncate">@${r.profiles.handle}</p>
+    async function uploadStory(file) {
+      if (!file) return;
+      if (!currentUser) return alert("Inicia sesión para agregar un estado.");
+
+      const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
+      const { error } = await supabase.storage.from('stories').upload(filePath, file);
+      if (error) return alert("Error al subir el archivo.");
+
+      const { data } = supabase.storage.from('stories').getPublicUrl(filePath);
+      await supabase.from('stories').insert([{
+        user_id: currentUser.id,
+        media_url: data.publicUrl,
+        type: file.type.includes('video') ? 'video' : 'image'
+      }]);
+
+      loadStories();
+    }
+
+    // GESTIÓN DE PUBLICACIONES (FEED)
+    function handleImagePreview(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('imagePreview').src = e.target.result;
+          document.getElementById('imagePreviewContainer').classList.remove('hidden');
+        }
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function clearImageSelection() {
+      document.getElementById('imageInput').value = '';
+      document.getElementById('imagePreviewContainer').classList.add('hidden');
+    }
+
+    async function loadFeed() {
+      const container = document.getElementById('feedContainer');
+      const { data: posts } = await supabase
+        .from('posts')
+        .select('*, profiles(username, avatar_url, handle), post_likes(user_id)')
+        .order('created_at', { ascending: false });
+
+      if (!posts || posts.length === 0) {
+        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No hay publicaciones todavía. ¡Sé el primero en compartir algo!</div>`;
+        return;
+      }
+
+      container.innerHTML = posts.map(post => {
+        const isLiked = currentUser ? post.post_likes?.some(l => l.user_id === currentUser.id) : false;
+        const likesCount = post.post_likes?.length || 0;
+
+        return `
+          <article class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-md">
+            <div class="flex items-center gap-3 mb-3">
+              <img src="${post.profiles?.avatar_url || 'https://via.placeholder.com/150'}" class="w-10 h-10 rounded-full object-cover border border-slate-700">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-sm font-semibold text-slate-100">${post.profiles?.username || 'Usuario'}</h4>
+                  ${post.is_news ? '<span class="text-[10px] bg-blue-600 text-white font-bold px-1.5 py-0.5 rounded">📰 NOTICIA</span>' : ''}
+                </div>
+                <span class="text-xs text-slate-500">@${post.profiles?.handle || 'usuario'}</span>
               </div>
             </div>
-            <div class="flex gap-1">
-              <button onclick="respondFriendRequest('${r.id}', 'accepted')" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-2 py-0.5 rounded-md text-[10px]">✓</button>
-              <button onclick="respondFriendRequest('${r.id}', 'rejected')" class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold px-2 py-0.5 rounded-md text-[10px]">✕</button>
+
+            ${post.content ? `<p class="text-sm text-slate-200 mb-3 whitespace-pre-line">${post.content}</p>` : ''}
+            ${post.image_url ? `<img src="${post.image_url}" class="w-full rounded-lg mb-3 border border-slate-700/80 max-h-96 object-cover">` : ''}
+
+            <div class="flex items-center gap-4 pt-2 border-t border-slate-700/50">
+              <button onclick="toggleLike('${post.id}', ${isLiked})" class="flex items-center gap-1.5 text-xs font-semibold ${isLiked ? 'text-red-500' : 'text-slate-400 hover:text-slate-200'} transition">
+                <span>${isLiked ? '❤️' : '🤍'}</span>
+                <span>${likesCount}</span>
+              </button>
             </div>
-          </div>
-        `).join('');
-      } else {
-        requestsSection.classList.add('hidden');
-        friendsBadge.classList.add('hidden');
-      }
-
-      const { data: friendships } = await supabaseClient
-        .from('friendships')
-        .select(`id, requester_id, receiver_id`)
-        .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
-        .eq('status', 'accepted');
-
-      const friendsList = document.getElementById('friends-list');
-      const friendsCount = document.getElementById('friends-count');
-
-      if (friendships && friendships.length > 0) {
-        const friendUserIds = friendships.map(f => f.requester_id === currentUser.id ? f.receiver_id : f.requester_id);
-
-        const { data: friendsProfiles } = await supabaseClient
-          .from('profiles')
-          .select('*')
-          .in('id', friendUserIds);
-
-        friendsCount.textContent = friendsProfiles ? friendsProfiles.length : 0;
-
-        friendsList.innerHTML = (friendsProfiles || []).map(f => `
-          <div onclick="openPrivateChat('${f.id}', '${f.username}', '${f.handle}', '${f.avatar_url || ''}')" class="flex items-center gap-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-xl cursor-pointer transition-all">
-            <img src="${f.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-8 h-8 rounded-full object-cover border border-slate-700">
-            <div class="flex-1 overflow-hidden">
-              <p class="text-xs font-bold text-cyan-400 truncate">${f.username}</p>
-              <p class="text-[10px] text-slate-500 truncate">@${f.handle}</p>
-            </div>
-          </div>
-        `).join('');
-      } else {
-        friendsCount.textContent = 0;
-        friendsList.innerHTML = '<div class="text-slate-500 text-xs py-4 text-center">Sin amigos aún. ¡Agrega a alguien arriba!</div>';
-      }
+          </article>
+        `;
+      }).join('');
     }
 
-    async function respondFriendRequest(requestId, status) {
-      await supabaseClient.from('friendships').update({ status }).eq('id', requestId);
-      loadFriendsData();
-    }
-
-    // ABRIR CHAT PRIVADO
-    function openPrivateChat(friendId, name, handle, avatarUrl) {
-      activeFriend = { id: friendId, name, handle, avatarUrl };
-      noFriendSelected.classList.add('hidden');
-      activeDmContainer.classList.remove('hidden');
-
-      dmFriendAvatar.src = avatarUrl || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
-      dmFriendName.textContent = name;
-      dmFriendHandle.textContent = `@${handle}`;
-
-      emojiPickerPopup.classList.add('hidden');
-      gifPickerPopup.classList.add('hidden');
-
-      loadDirectMessages();
-    }
-
-    async function loadDirectMessages() {
-      if (!activeFriend || !currentUser) return;
-
-      const { data, error } = await supabaseClient
-        .from('direct_messages')
-        .select('*')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeFriend.id}),and(sender_id.eq.${activeFriend.id},receiver_id.eq.${currentUser.id})`)
-        .order('created_at', { ascending: true });
-
-      if (error) return;
-
-      dmMessagesContainer.innerHTML = '';
-      (data || []).forEach(renderDirectMessage);
-    }
-
-    function renderDirectMessage(msg) {
-      const isMe = msg.sender_id === currentUser.id;
-      const msgDiv = document.createElement('div');
-      msgDiv.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
-
-      let contentHtml = '';
-      if (msg.type === 'image' || msg.type === 'gif') {
-        contentHtml = `<img src="${msg.media_url}" class="max-w-xs rounded-xl border border-slate-700/60 my-1 object-cover max-h-60">`;
-      } else if (msg.type === 'audio') {
-        contentHtml = `<audio controls src="${msg.media_url}" class="my-1 h-8 max-w-xs"></audio>`;
-      } else {
-        contentHtml = `<p class="text-xs break-words">${msg.content}</p>`;
-      }
-
-      msgDiv.innerHTML = `
-        <div class="max-w-[80%] p-3 rounded-2xl ${isMe ? 'bg-cyan-600 text-slate-950 rounded-br-none' : 'bg-slate-900 text-white border border-slate-800 rounded-bl-none'} space-y-1 shadow-md">
-          ${contentHtml}
-          <span class="text-[9px] opacity-70 block text-right font-mono">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-        </div>
-      `;
-
-      dmMessagesContainer.appendChild(msgDiv);
-      dmMessagesContainer.scrollTop = dmMessagesContainer.scrollHeight;
-    }
-
-    // ENVIAR TEXTO PRIVADO
-    document.getElementById('dm-form').addEventListener('submit', async (e) => {
+    async function handlePostSubmit(e) {
       e.preventDefault();
-      const content = dmInput.value.trim();
-      if (!content || !activeFriend) return;
+      if (!currentUser) return alert("Inicia sesión para publicar.");
 
-      const { error } = await supabaseClient.from('direct_messages').insert([{
-        sender_id: currentUser.id,
-        receiver_id: activeFriend.id,
-        content,
-        type: 'text'
-      }]);
-
-      if (!error) dmInput.value = '';
-    });
-
-    // SUBIR Y ENVIAR FOTO PRIVADA
-    dmFileInput.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file || !activeFriend) return;
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabaseClient.storage.from('chat-media').upload(fileName, file);
-
-      if (!uploadError) {
-        const { data } = supabaseClient.storage.from('chat-media').getPublicUrl(fileName);
-        await supabaseClient.from('direct_messages').insert([{
-          sender_id: currentUser.id,
-          receiver_id: activeFriend.id,
-          media_url: data.publicUrl,
-          type: 'image'
-        }]);
-      }
-    });
-
-    // NOTAS DE VOZ (MICROFONO)
-    const recordAudioBtn = document.getElementById('record-audio-btn');
-    const cancelRecordBtn = document.getElementById('cancel-record-btn');
-    const stopRecordBtn = document.getElementById('stop-record-btn');
-
-    recordAudioBtn.addEventListener('click', async () => {
-      if (!navigator.mediaDevices) return alert("Tu navegador o conexión no soporta grabación de voz.");
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
-        mediaRecorder.start();
-
-        recordingSeconds = 0;
-        recordingBar.classList.remove('hidden');
-        recordingTimerInterval = setInterval(() => {
-          recordingSeconds++;
-          const mins = Math.floor(recordingSeconds / 60);
-          const secs = recordingSeconds % 60;
-          recordingTimer.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }, 1000);
-      } catch (err) {
-        alert("Permiso de micrófono denegado o no disponible.");
-      }
-    });
-
-    cancelRecordBtn.addEventListener('click', () => {
-      if (mediaRecorder) mediaRecorder.stop();
-      clearInterval(recordingTimerInterval);
-      recordingBar.classList.add('hidden');
-    });
-
-    stopRecordBtn.addEventListener('click', () => {
-      if (!mediaRecorder) return;
-      
-      mediaRecorder.onstop = async () => {
-        clearInterval(recordingTimerInterval);
-        recordingBar.classList.add('hidden');
-
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const fileName = `${currentUser.id}-${Date.now()}.webm`;
-
-        const { error: uploadError } = await supabaseClient.storage.from('chat-audio').upload(fileName, audioBlob);
-
-        if (!uploadError) {
-          const { data } = supabaseClient.storage.from('chat-audio').getPublicUrl(fileName);
-          await supabaseClient.from('direct_messages').insert([{
-            sender_id: currentUser.id,
-            receiver_id: activeFriend.id,
-            media_url: data.publicUrl,
-            type: 'audio'
-          }]);
-        }
-      };
-
-      mediaRecorder.stop();
-    });
-
-    // ==========================================
-    // SECTOR DE EMOJIS COMPLETO (POR CATEGORÍAS)
-    // ==========================================
-    const emojiCategoriesNav = document.getElementById('emoji-categories-nav');
-    const emojiGrid = document.getElementById('emoji-grid');
-    let currentEmojiCat = Object.keys(EMOJI_CATEGORIES)[0];
-
-    function renderEmojiPicker() {
-      emojiCategoriesNav.innerHTML = Object.keys(EMOJI_CATEGORIES).map(cat => `
-        <button type="button" onclick="selectEmojiCategory('${cat}')" class="px-2 py-1 rounded-lg transition-all ${cat === currentEmojiCat ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400 hover:text-white'}">
-          ${cat.split(' ')[0]}
-        </button>
-      `).join('');
-
-      const emojis = EMOJI_CATEGORIES[currentEmojiCat];
-      emojiGrid.innerHTML = emojis.map(emoji => `
-        <button type="button" onclick="insertEmoji('${emoji}')" class="hover:bg-slate-800 p-1 rounded-lg text-center transition-all">${emoji}</button>
-      `).join('');
-    }
-
-    function selectEmojiCategory(cat) {
-      currentEmojiCat = cat;
-      renderEmojiPicker();
-    }
-
-    function insertEmoji(emoji) {
-      dmInput.value += emoji;
-      emojiPickerPopup.classList.add('hidden');
-      dmInput.focus();
-    }
-
-    document.getElementById('emoji-toggle-btn').addEventListener('click', () => {
-      renderEmojiPicker();
-      emojiPickerPopup.classList.toggle('hidden');
-      gifPickerPopup.classList.add('hidden');
-    });
-
-    // ==========================================
-    // SECTOR DE GIFS (API TENOR V2 REALTIME)
-    // ==========================================
-    const gifSearchInput = document.getElementById('gif-search-input');
-    const gifResults = document.getElementById('gif-results');
-
-    async function fetchGifs(query = '') {
-      gifResults.innerHTML = '<div class="col-span-3 text-center text-xs text-slate-500 py-6">Cargando GIFs...</div>';
-      try {
-        const url = query.trim()
-          ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${TENOR_API_KEY}&limit=12`
-          : `https://tenor.googleapis.com/v2/featured?key=${TENOR_API_KEY}&limit=12`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.results && data.results.length > 0) {
-          gifResults.innerHTML = data.results.map(g => {
-            const gifUrl = g.media_formats.tinygif?.url || g.media_formats.gif?.url;
-            return `
-              <img src="${gifUrl}" onclick="sendGif('${gifUrl}')" class="w-full h-20 object-cover rounded-xl border border-slate-800 hover:border-cyan-500 cursor-pointer transition-all">
-            `;
-          }).join('');
-        } else {
-          gifResults.innerHTML = '<div class="col-span-3 text-center text-xs text-slate-500 py-6">No se encontraron GIFs.</div>';
-        }
-      } catch (err) {
-        gifResults.innerHTML = '<div class="col-span-3 text-center text-xs text-red-400 py-6">Error al cargar GIFs.</div>';
-      }
-    }
-
-    document.getElementById('gif-toggle-btn').addEventListener('click', () => {
-      const isHidden = gifPickerPopup.classList.contains('hidden');
-      if (isHidden) {
-        gifPickerPopup.classList.remove('hidden');
-        emojiPickerPopup.classList.add('hidden');
-        fetchGifs(gifSearchInput.value);
-      } else {
-        gifPickerPopup.classList.add('hidden');
-      }
-    });
-
-    let gifSearchTimeout = null;
-    gifSearchInput.addEventListener('input', (e) => {
-      clearTimeout(gifSearchTimeout);
-      gifSearchTimeout = setTimeout(() => {
-        fetchGifs(e.target.value);
-      }, 400);
-    });
-
-    async function sendGif(gifUrl) {
-      if (!activeFriend) return;
-      await supabaseClient.from('direct_messages').insert([{
-        sender_id: currentUser.id,
-        receiver_id: activeFriend.id,
-        media_url: gifUrl,
-        type: 'gif'
-      }]);
-      gifPickerPopup.classList.add('hidden');
-    }
-
-    // REALTIME DE DM PRIVADOS
-    supabaseClient
-      .channel('public:direct_messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, payload => {
-        const msg = payload.new;
-        if (activeFriend && (
-          (msg.sender_id === currentUser.id && msg.receiver_id === activeFriend.id) ||
-          (msg.sender_id === activeFriend.id && msg.receiver_id === currentUser.id)
-        )) {
-          renderDirectMessage(msg);
-        }
-      })
-      .subscribe();
-
-    // AUTENTICACIÓN
-    document.getElementById('email-auth-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value;
-      const password = document.getElementById('auth-password').value;
-
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) alert("Error: " + error.message);
-      else {
-        currentUser = data.user;
-        await loadProfile();
-        showChatTab();
-      }
-    });
-
-    document.getElementById('signup-btn').addEventListener('click', async () => {
-      const email = document.getElementById('auth-email').value;
-      const password = document.getElementById('auth-password').value;
-      if (!email || !password) return alert("Ingresa correo y contraseña.");
-
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) alert("Error: " + error.message);
-      else alert("¡Registro exitoso! Ya puedes ingresar.");
-    });
-
-    document.getElementById('google-login-btn').addEventListener('click', async () => {
-      const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: window.location.href }
-      });
-      if (error) alert("Error con Google: " + error.message);
-    });
-
-    logoutBtn.addEventListener('click', async () => {
-      await supabaseClient.auth.signOut();
-      currentUser = null;
-      currentProfile = null;
-      showAuthScreen();
-    });
-
-    // CHAT GLOBAL
-    function renderMessage(msg) {
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'flex gap-3 items-start bg-slate-900 p-3 rounded-xl border border-slate-800';
-      
-      const avatarSrc = msg.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
-      const handleDisplay = msg.handle ? `@${msg.handle}` : '';
-
-      msgDiv.innerHTML = `
-        <img src="${avatarSrc}" class="w-9 h-9 rounded-full object-cover border border-slate-700 mt-0.5 flex-shrink-0" alt="Avatar">
-        <div class="flex-1 overflow-hidden">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-bold text-xs text-cyan-400">${msg.username || 'Usuario'}</span>
-            ${handleDisplay ? `<span class="text-[11px] text-slate-500">${handleDisplay}</span>` : ''}
-            <span class="text-[10px] text-slate-600 ml-auto font-mono">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-          </div>
-          <p class="text-sm text-slate-200 mt-1 break-words">${msg.content}</p>
-        </div>
-      `;
-      messagesContainer.appendChild(msgDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-
-    async function loadMessages() {
-      const { data, error } = await supabaseClient
-        .from('messages')
-        .select(`id, content, created_at, username, user_id`)
-        .order('created_at', { ascending: true });
-
-      if (error) return;
-
-      const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
-      let profilesMap = {};
-
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabaseClient
-          .from('profiles')
-          .select('id, username, handle, avatar_url')
-          .in('id', userIds);
-
-        (profiles || []).forEach(p => profilesMap[p.id] = p);
-      }
-
-      messagesContainer.innerHTML = '';
-      if (data && data.length > 0) {
-        data.forEach(msg => {
-          const profile = profilesMap[msg.user_id] || {};
-          renderMessage({
-            ...msg,
-            username: profile.username || msg.username,
-            handle: profile.handle,
-            avatar_url: profile.avatar_url
-          });
-        });
-      } else {
-        messagesContainer.innerHTML = '<div class="text-slate-500 text-center text-xs my-4">No hay mensajes. ¡Escribe algo!</div>';
-      }
-    }
-
-    // REALTIME DE CHAT GLOBAL Y SOLICITUDES
-    supabaseClient
-      .channel('public:messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async payload => {
-        if (!currentUser) return;
-        const newMsg = payload.new;
-        let profile = {};
-        if (newMsg.user_id) {
-          const { data } = await supabaseClient.from('profiles').select('username, handle, avatar_url').eq('id', newMsg.user_id).single();
-          if (data) profile = data;
-        }
-        renderMessage({
-          ...newMsg,
-          username: profile.username || newMsg.username,
-          handle: profile.handle,
-          avatar_url: profile.avatar_url
-        });
-      })
-      .subscribe();
-
-    supabaseClient
-      .channel('public:friendships')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, () => {
-        if (currentUser) loadFriendsData();
-      })
-      .subscribe();
-
-    document.getElementById('chat-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('message-input');
+      const input = document.getElementById('postInput');
+      const fileInput = document.getElementById('imageInput');
       const content = input.value.trim();
-      if (!content || !currentUser) return;
+      const file = fileInput.files[0];
 
-      const displayUsername = currentProfile?.username || currentUser.email.split('@')[0];
+      if (!content && !file) return;
 
-      const { error } = await supabaseClient
-        .from('messages')
-        .insert([{ 
-          content, 
-          username: displayUsername, 
-          user_id: currentUser.id 
-        }]);
+      let imageUrl = null;
+      if (file) {
+        const filePath = `${currentUser.id}/${Date.now()}.${file.name.split('.').pop()}`;
+        await supabase.storage.from('posts').upload(filePath, file);
+        const { data } = supabase.storage.from('posts').getPublicUrl(filePath);
+        imageUrl = data.publicUrl;
+      }
 
-      if (error) alert("Error al enviar: " + error.message);
-      else input.value = '';
-    });
+      await supabase.from('posts').insert([{
+        user_id: currentUser.id,
+        content: content || null,
+        image_url: imageUrl
+      }]);
 
-    // INICIAR VERIFICACIÓN
-    checkUser();
+      input.value = '';
+      clearImageSelection();
+      loadFeed();
+    }
+
+    async function toggleLike(postId, isLiked) {
+      if (!currentUser) return alert("Inicia sesión para dar Me Gusta.");
+      if (isLiked) {
+        await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
+      } else {
+        await supabase.from('post_likes').insert([{ post_id: postId, user_id: currentUser.id }]);
+      }
+      loadFeed();
+    }
+
+    function subscribeRealtimeEvents() {
+      supabase
+        .channel('realtime_app')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => loadFeed())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'stories' }, () => loadStories())
+        .subscribe();
+    }
+
+    function handleAuthAction() {
+      alert("Redirigiendo al sistema de inicio de sesión de Supabase Auth...");
+    }
+
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   </script>
 </body>
 </html>
