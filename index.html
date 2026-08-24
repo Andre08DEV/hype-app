@@ -28,52 +28,80 @@
 </head>
 <body class="bg-slate-900 dark:bg-slate-900 text-slate-100 min-h-screen pb-20 antialiased transition-colors duration-200">
 
-  <!-- MODAL OBLIGATORIO DE ENTRADA (AUTH / INVITADO) -->
+  <!-- MODAL OBLIGATORIO DE ENTRADA / AUTH -->
   <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl text-center space-y-6">
-      <div class="flex justify-center">
-        <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
+      
+      <!-- LOGO Y TÍTULO -->
+      <div class="text-center space-y-2">
+        <div class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 items-center justify-center shadow-lg shadow-blue-500/30 mb-1">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
-      </div>
-      <div>
-        <h2 class="text-2xl font-black tracking-tight text-white">Bienvenido a HYPE</h2>
-        <p class="text-xs text-slate-400 mt-1">Conéctate con creadores, comparte proyectos y vive la red.</p>
+        <h2 id="authTitle" class="text-2xl font-black tracking-tight text-white">Bienvenido a HYPE</h2>
+        <p id="authSubtitle" class="text-xs text-slate-400">Ingresa a tu cuenta para continuar</p>
       </div>
 
-      <div class="space-y-3">
-        <button onclick="handleLoginSubmit()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-          Iniciar Sesión / Registrarse
+      <!-- FORMULARIO DE ACCESO -->
+      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Correo Electrónico</label>
+          <input type="email" id="authEmail" required placeholder="tu@email.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña</label>
+          <input type="password" id="authPassword" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div id="authError" class="hidden text-xs text-red-400 font-medium bg-red-950/50 border border-red-800/50 p-2.5 rounded-xl"></div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/30 transition text-sm flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+          <span>Iniciar Sesión</span>
         </button>
-        <button onclick="enterAsGuest()" class="w-full bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-semibold py-3 rounded-xl border border-slate-600/50 transition text-sm">
-          Entrar como Invitado (Solo Lectura)
-        </button>
+      </form>
+
+      <!-- SWITCH ENTRE LOGIN Y REGISTRO -->
+      <div class="text-center text-xs text-slate-400">
+        <span id="authToggleText">¿No tienes cuenta?</span>
+        <button type="button" onclick="toggleAuthMode()" id="authToggleBtn" class="text-blue-400 font-bold hover:underline ml-1">Regístrate</button>
       </div>
+
+      <div class="relative flex py-1 items-center">
+        <div class="flex-grow border-t border-slate-700"></div>
+        <span class="flex-shrink mx-3 text-[11px] text-slate-500 font-bold uppercase tracking-wider">O</span>
+        <div class="flex-grow border-t border-slate-700"></div>
+      </div>
+
+      <!-- BOTÓN DE INVITADO -->
+      <button type="button" onclick="enterAsGuest()" class="w-full bg-slate-700/60 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl border border-slate-600/50 transition text-xs flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Entrar como Invitado (Solo Lectura)
+      </button>
     </div>
   </div>
 
   <!-- ENCABEZADO PRINCIPAL -->
-  <header class="sticky top-0 z-40 bg-slate-900/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3">
+  <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3">
     <div class="max-w-2xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-2 cursor-pointer" onclick="scrollToTop()">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         </div>
         <span class="text-xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">HYPE</span>
       </div>
 
-      <!-- BOTÓN AJUSTES Y DE CUENTA -->
+      <!-- BOTÓN AJUSTES -->
       <div class="relative">
         <button onclick="toggleSettingsMenu()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </button>
 
-        <!-- PANEL EXTENDIDO DE CONFIGURACIÓN Y PRIVACIDAD -->
+        <!-- PANEL EXTENDIDO DE CONFIGURACIÓN -->
         <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-4 z-50 space-y-4">
           <div class="border-b border-slate-700 pb-3">
             <p class="text-xs font-bold text-slate-400 uppercase">Mi Cuenta</p>
-            <p id="menuUserLabel" class="text-sm font-semibold text-white mt-0.5">Invitado</p>
+            <p id="menuUserLabel" class="text-sm font-semibold text-white mt-0.5 truncate">Invitado</p>
           </div>
 
           <!-- APARIENCIA -->
@@ -91,20 +119,16 @@
             </div>
           </div>
 
-          <!-- PRIVACIDAD & OPCIONES -->
+          <!-- PRIVACIDAD -->
           <div class="space-y-2 border-t border-slate-700 pt-3">
-            <span class="text-xs font-semibold text-slate-400">Privacidad y Control</span>
+            <span class="text-xs font-semibold text-slate-400">Privacidad</span>
             <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer p-1.5 rounded-lg hover:bg-slate-700/50">
               <span>Perfil Privado</span>
-              <input type="checkbox" onchange="togglePrivateProfile(this.checked)" class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
-            </label>
-            <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer p-1.5 rounded-lg hover:bg-slate-700/50">
-              <span>Permitir Reacciones</span>
-              <input type="checkbox" checked class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
+              <input type="checkbox" class="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
             </label>
           </div>
 
-          <!-- ACCIÓN SESIÓN -->
+          <!-- CERRAR / INICIAR SESIÓN -->
           <div class="border-t border-slate-700 pt-3">
             <button onclick="logoutOrLogin()" id="menuAuthBtn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-xs transition">
               Iniciar Sesión
@@ -118,7 +142,7 @@
   <!-- CONTENIDO PRINCIPAL -->
   <main class="max-w-2xl mx-auto p-4 space-y-6">
 
-    <!-- HISTORIAS / ESTADOS -->
+    <!-- HISTORIAS -->
     <section class="border-b border-slate-800 pb-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estados</h2>
@@ -147,7 +171,7 @@
       </button>
     </div>
 
-    <!-- PESTAÑA FEED Y FORMULARIO -->
+    <!-- PESTAÑA FEED -->
     <div id="tabContentFeed" class="space-y-6">
       
       <!-- FORMULARIO DE PUBLICACIÓN -->
@@ -177,13 +201,13 @@
         </form>
       </div>
 
-      <!-- BANNER DE MODO INVITADO -->
-      <div id="guestNotice" class="hidden bg-slate-800/60 border border-slate-700 p-3 rounded-xl text-center text-xs text-slate-400">
-        Estás navegando como <strong class="text-slate-200">Invitado</strong>. Para publicar e interactuar, 
+      <!-- AVISO DE INVITADO -->
+      <div id="guestNotice" class="hidden bg-slate-800/60 border border-slate-700 p-3.5 rounded-xl text-center text-xs text-slate-400">
+        Estás en modo <strong class="text-slate-200">Invitado</strong>. Para publicar e interactuar, 
         <button onclick="showAuthModal()" class="text-blue-400 font-bold underline ml-1">Inicia Sesión</button>.
       </div>
 
-      <!-- CONTENEDOR FEED DE POSTS -->
+      <!-- CONTENEDOR FEED -->
       <div id="feedContainer" class="space-y-4"></div>
     </div>
 
@@ -241,6 +265,7 @@
     const supabase = window.supabaseClient || supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
+    let isSignUpMode = false;
 
     document.addEventListener('DOMContentLoaded', async () => {
       await checkSession();
@@ -257,6 +282,8 @@
         if (user) {
           currentUser = user;
           document.getElementById('authModal').classList.add('hidden');
+          document.getElementById('postFormContainer').classList.remove('hidden');
+          document.getElementById('guestNotice').classList.add('hidden');
           document.getElementById('menuUserLabel').innerText = user.email || 'Usuario';
           document.getElementById('menuAuthBtn').innerText = 'Cerrar Sesión';
         } else {
@@ -271,6 +298,54 @@
       document.getElementById('authModal').classList.remove('hidden');
     }
 
+    function toggleAuthMode() {
+      isSignUpMode = !isSignUpMode;
+      const title = document.getElementById('authTitle');
+      const subtitle = document.getElementById('authSubtitle');
+      const submitBtn = document.getElementById('authSubmitBtn');
+      const toggleText = document.getElementById('authToggleText');
+      const toggleBtn = document.getElementById('authToggleBtn');
+      const errBox = document.getElementById('authError');
+      errBox.classList.add('hidden');
+
+      if (isSignUpMode) {
+        title.innerText = "Crear Cuenta";
+        subtitle.innerText = "Únete a HYPE creando tu perfil";
+        submitBtn.querySelector('span').innerText = "Registrarse";
+        toggleText.innerText = "¿Ya tienes cuenta?";
+        toggleBtn.innerText = "Inicia Sesión";
+      } else {
+        title.innerText = "Bienvenido a HYPE";
+        subtitle.innerText = "Ingresa a tu cuenta para continuar";
+        submitBtn.querySelector('span').innerText = "Iniciar Sesión";
+        toggleText.innerText = "¿No tienes cuenta?";
+        toggleBtn.innerText = "Regístrate";
+      }
+    }
+
+    async function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value;
+      const password = document.getElementById('authPassword').value;
+      const errBox = document.getElementById('authError');
+      errBox.classList.add('hidden');
+
+      try {
+        if (isSignUpMode) {
+          const { data, error } = await supabase.auth.signUp({ email, password });
+          if (error) throw error;
+          alert("Registro exitoso. Si Supabase requiere confirmación de correo, revisa tu bandeja de entrada.");
+        } else {
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+        }
+        await checkSession();
+      } catch (err) {
+        errBox.innerText = err.message || "Error al autenticar";
+        errBox.classList.remove('hidden');
+      }
+    }
+
     function enterAsGuest() {
       currentUser = null;
       document.getElementById('authModal').classList.add('hidden');
@@ -280,14 +355,9 @@
       document.getElementById('menuAuthBtn').innerText = 'Iniciar Sesión';
     }
 
-    function handleLoginSubmit() {
-      alert("Redirigiendo al inicio de sesión de Supabase Auth...");
-    }
-
     function logoutOrLogin() {
       if (currentUser) {
-        supabase.auth.signOut();
-        location.reload();
+        supabase.auth.signOut().then(() => location.reload());
       } else {
         showAuthModal();
       }
@@ -303,10 +373,6 @@
       } else {
         document.documentElement.classList.remove('dark');
       }
-    }
-
-    function togglePrivateProfile(checked) {
-      console.log("Privacidad de perfil cambiada:", checked);
     }
 
     function switchTab(tab) {
@@ -329,7 +395,10 @@
     }
 
     function triggerStoryUpload() {
-      if (!currentUser) return alert("Debes iniciar sesión para compartir estados.");
+      if (!currentUser) {
+        showAuthModal();
+        return;
+      }
       document.getElementById('storyFileInput').click();
     }
 
@@ -439,7 +508,10 @@
 
     async function handlePostSubmit(e) {
       e.preventDefault();
-      if (!currentUser) return alert("Debes iniciar sesión para publicar.");
+      if (!currentUser) {
+        showAuthModal();
+        return;
+      }
 
       const input = document.getElementById('postInput');
       const fileInput = document.getElementById('imageInput');
@@ -468,7 +540,10 @@
     }
 
     async function toggleLike(postId, isLiked) {
-      if (!currentUser) return alert("Inicia sesión para reaccionar.");
+      if (!currentUser) {
+        showAuthModal();
+        return;
+      }
       if (isLiked) {
         await supabase.from('post_likes').delete().eq('post_id', postId).eq('user_id', currentUser.id);
       } else {
