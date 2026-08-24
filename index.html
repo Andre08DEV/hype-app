@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype App - Chat Global & Amigos</title>
+  <title>Hype App - Chat & Amigos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -77,36 +77,103 @@
     </form>
   </div>
 
-  <!-- PANTALLA 3: SECCIÓN DE AMIGOS -->
-  <div id="friends-screen" class="hidden flex-1 p-4 max-w-3xl mx-auto w-full overflow-y-auto space-y-6">
-    <!-- Agregar Amigo -->
-    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
-      <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide">Añadir Amigo</h3>
-      <form id="add-friend-form" class="flex gap-2">
-        <div class="relative flex-1">
-          <span class="absolute left-3 top-2.5 text-slate-500 text-sm">@</span>
-          <input id="add-friend-handle" type="text" placeholder="handle_del_usuario" required class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500">
+  <!-- PANTALLA 3: SECCIÓN DE AMIGOS & CHAT PRIVADO -->
+  <div id="friends-screen" class="hidden flex-1 flex flex-col md:flex-row overflow-hidden">
+    <!-- Panel Izquierdo: Lista de Amigos -->
+    <div id="friends-sidebar" class="w-full md:w-80 bg-slate-900/50 border-r border-slate-800 p-4 flex flex-col gap-4 overflow-y-auto">
+      <!-- Agregar Amigo -->
+      <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-2">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Añadir Amigo</h3>
+        <form id="add-friend-form" class="flex gap-2">
+          <div class="relative flex-1">
+            <span class="absolute left-2.5 top-2 text-slate-500 text-xs">@</span>
+            <input id="add-friend-handle" type="text" placeholder="handle" required class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-6 pr-2 py-1.5 text-xs focus:outline-none focus:border-cyan-500">
+          </div>
+          <button type="submit" class="bg-cyan-500 text-slate-950 font-bold px-3 py-1.5 rounded-xl text-xs">Añadir</button>
+        </form>
+      </div>
+
+      <!-- Solicitudes Pendientes -->
+      <div id="requests-section" class="hidden space-y-2">
+        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Solicitudes Pendientes</h3>
+        <div id="requests-list" class="space-y-2"></div>
+      </div>
+
+      <!-- Lista de Amigos -->
+      <div class="flex-1 space-y-2">
+        <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Mis Amigos (<span id="friends-count">0</span>)</h3>
+        <div id="friends-list" class="space-y-1.5"></div>
+      </div>
+    </div>
+
+    <!-- Panel Derecho: Chat Privado con Amigo -->
+    <div id="private-chat-area" class="flex-1 flex flex-col bg-slate-950">
+      <div id="no-friend-selected" class="flex-1 flex flex-col items-center justify-center p-6 text-center text-slate-500">
+        <p class="text-3xl mb-2">💬</p>
+        <p class="text-sm font-semibold">Selecciona un amigo para chatear</p>
+      </div>
+
+      <div id="active-dm-container" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+        <!-- DM Header -->
+        <div class="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <img id="dm-friend-avatar" src="" class="w-8 h-8 rounded-full object-cover">
+            <div>
+              <p id="dm-friend-name" class="text-xs font-bold text-white"></p>
+              <p id="dm-friend-handle" class="text-[10px] text-slate-400"></p>
+            </div>
+          </div>
         </div>
-        <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-sm transition-all">Enviar Solicitud</button>
-      </form>
-    </div>
 
-    <!-- Solicitudes Pendientes -->
-    <div id="requests-section" class="hidden space-y-2">
-      <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Solicitudes de Amistad</h3>
-      <div id="requests-list" class="space-y-2"></div>
-    </div>
+        <!-- DM Messages -->
+        <div id="dm-messages-container" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
 
-    <!-- Lista de Amigos -->
-    <div class="space-y-2">
-      <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Mis Amigos (<span id="friends-count">0</span>)</h3>
-      <div id="friends-list" class="space-y-2">
-        <div class="text-slate-500 text-xs py-4 text-center">No tienes amigos añadidos todavía.</div>
+        <!-- Popups de Emojis / GIFs -->
+        <div id="emoji-picker-popup" class="hidden p-2 bg-slate-900 border border-slate-800 rounded-xl grid grid-cols-6 gap-2 text-xl max-h-40 overflow-y-auto mx-4 mb-2">
+          <button class="emoji-btn">😀</button><button class="emoji-btn">😂</button><button class="emoji-btn">🔥</button><button class="emoji-btn">❤️</button><button class="emoji-btn">👍</button><button class="emoji-btn">😎</button>
+          <button class="emoji-btn">🎉</button><button class="emoji-btn">👀</button><button class="emoji-btn">💯</button><button class="emoji-btn">⚡</button><button class="emoji-btn">🙌</button><button class="emoji-btn">😭</button>
+        </div>
+
+        <div id="gif-picker-popup" class="hidden p-3 bg-slate-900 border border-slate-800 rounded-xl mx-4 mb-2 space-y-2">
+          <input id="gif-search-input" type="text" placeholder="Buscar GIF..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white">
+          <div id="gif-results" class="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto"></div>
+        </div>
+
+        <!-- DM Form / Input -->
+        <div class="p-3 bg-slate-900 border-t border-slate-800 relative">
+          <!-- Grabación de Voz Indicator -->
+          <div id="recording-bar" class="hidden flex items-center justify-between bg-red-950/60 border border-red-500/40 p-2 rounded-xl mb-2 text-xs">
+            <div class="flex items-center gap-2 text-red-400">
+              <span class="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping"></span>
+              <span>Grabando audio... <strong id="recording-timer">0:00</strong></span>
+            </div>
+            <div class="flex gap-2">
+              <button id="cancel-record-btn" class="text-slate-400 hover:text-white font-bold px-2">Cancelar</button>
+              <button id="stop-record-btn" class="bg-red-500 text-white font-bold px-3 py-1 rounded-lg">Enviar Audio</button>
+            </div>
+          </div>
+
+          <form id="dm-form" class="flex items-center gap-2">
+            <button type="button" id="emoji-toggle-btn" class="p-2 text-slate-400 hover:text-white text-lg">😀</button>
+            <button type="button" id="gif-toggle-btn" class="p-2 text-slate-400 hover:text-white font-bold text-xs bg-slate-800 rounded-lg">GIF</button>
+            
+            <label class="p-2 text-slate-400 hover:text-white cursor-pointer">
+              📷
+              <input id="dm-file-input" type="file" accept="image/*" class="hidden">
+            </label>
+
+            <button type="button" id="record-audio-btn" class="p-2 text-slate-400 hover:text-red-400 text-lg">🎙️</button>
+
+            <input id="dm-input" type="text" placeholder="Escribe un mensaje privado..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-cyan-500 text-white">
+            
+            <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs">Enviar</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: PERFIL DE USUARIO -->
+  <!-- MODAL: PERFIL -->
   <div id="profile-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -125,20 +192,20 @@
 
         <div>
           <label class="text-[10px] text-slate-400 uppercase font-bold">Nombre Visible</label>
-          <input id="profile-username" type="text" required placeholder="Tu Nombre" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
+          <input id="profile-username" type="text" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
         </div>
 
         <div>
           <label class="text-[10px] text-slate-400 uppercase font-bold">Usuario (@arroba)</label>
           <div class="relative mt-1">
             <span class="absolute left-3 top-2 text-slate-500 text-sm">@</span>
-            <input id="profile-handle" type="text" required placeholder="usuario" class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500">
+            <input id="profile-handle" type="text" required class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500">
           </div>
         </div>
 
         <div>
           <label class="text-[10px] text-slate-400 uppercase font-bold">Descripción / Biografía</label>
-          <textarea id="profile-bio" rows="2" placeholder="Escribe algo sobre ti..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1 resize-none"></textarea>
+          <textarea id="profile-bio" rows="2" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1 resize-none"></textarea>
         </div>
 
         <div class="flex gap-2 pt-2">
@@ -159,7 +226,13 @@
     let currentProfile = null;
     let selectedFile = null;
 
-    // DOM
+    let activeFriend = null;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordingTimerInterval = null;
+    let recordingSeconds = 0;
+
+    // DOM Elements
     const authScreen = document.getElementById('auth-screen');
     const chatScreen = document.getElementById('chat-screen');
     const friendsScreen = document.getElementById('friends-screen');
@@ -187,6 +260,21 @@
     const profileBioInput = document.getElementById('profile-bio');
 
     const messagesContainer = document.getElementById('messages-container');
+
+    // DM Elements
+    const noFriendSelected = document.getElementById('no-friend-selected');
+    const activeDmContainer = document.getElementById('active-dm-container');
+    const dmFriendAvatar = document.getElementById('dm-friend-avatar');
+    const dmFriendName = document.getElementById('dm-friend-name');
+    const dmFriendHandle = document.getElementById('dm-friend-handle');
+    const dmMessagesContainer = document.getElementById('dm-messages-container');
+    const dmInput = document.getElementById('dm-input');
+    const dmFileInput = document.getElementById('dm-file-input');
+
+    const emojiPickerPopup = document.getElementById('emoji-picker-popup');
+    const gifPickerPopup = document.getElementById('gif-picker-popup');
+    const recordingBar = document.getElementById('recording-bar');
+    const recordingTimer = document.getElementById('recording-timer');
 
     async function checkUser() {
       const { data: { session } } = await supabaseClient.auth.getSession();
@@ -355,7 +443,6 @@
         return alert("No puedes enviarte una solicitud a ti mismo.");
       }
 
-      // Buscar el usuario por handle
       const { data: targetProfile, error: searchError } = await supabaseClient
         .from('profiles')
         .select('id')
@@ -366,7 +453,6 @@
         return alert("Usuario no encontrado. Revisa el handle.");
       }
 
-      // Enviar solicitud de amistad
       const { error: friendError } = await supabaseClient
         .from('friendships')
         .insert([{
@@ -376,8 +462,8 @@
         }]);
 
       if (friendError) {
-        if (friendError.code === '23505') alert("Ya existe una solicitud pendiente o son amigos.");
-        else alert("Error al enviar solicitud: " + friendError.message);
+        if (friendError.code === '23505') alert("Ya existe una solicitud o son amigos.");
+        else alert("Error: " + friendError.message);
       } else {
         alert(`¡Solicitud enviada a @${handleTarget}!`);
         input.value = '';
@@ -387,7 +473,6 @@
     async function loadFriendsData() {
       if (!currentUser) return;
 
-      // Obtener solicitudes entrantes
       const { data: requests } = await supabaseClient
         .from('friendships')
         .select(`
@@ -407,17 +492,17 @@
         friendsBadge.classList.remove('hidden');
 
         requestsList.innerHTML = requests.map(r => `
-          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl">
-            <div class="flex items-center gap-3">
-              <img src="${r.profiles.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-9 h-9 rounded-full object-cover">
+          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-2 rounded-xl">
+            <div class="flex items-center gap-2">
+              <img src="${r.profiles.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-7 h-7 rounded-full object-cover">
               <div>
                 <p class="text-xs font-bold text-white">${r.profiles.username}</p>
-                <p class="text-[10px] text-slate-500">@${r.profiles.handle}</p>
+                <p class="text-[9px] text-slate-500">@${r.profiles.handle}</p>
               </div>
             </div>
-            <div class="flex gap-2">
-              <button onclick="respondFriendRequest('${r.id}', 'accepted')" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs">Aceptar</button>
-              <button onclick="respondFriendRequest('${r.id}', 'rejected')" class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold px-3 py-1 rounded-lg text-xs">Rechazar</button>
+            <div class="flex gap-1">
+              <button onclick="respondFriendRequest('${r.id}', 'accepted')" class="bg-cyan-500 text-slate-950 font-bold px-2 py-0.5 rounded-md text-[10px]">✓</button>
+              <button onclick="respondFriendRequest('${r.id}', 'rejected')" class="bg-slate-800 text-slate-400 font-bold px-2 py-0.5 rounded-md text-[10px]">✕</button>
             </div>
           </div>
         `).join('');
@@ -426,15 +511,9 @@
         friendsBadge.classList.add('hidden');
       }
 
-      // Obtener Amigos aceptados
       const { data: friendships } = await supabaseClient
         .from('friendships')
-        .select(`
-          id,
-          requester_id,
-          receiver_id,
-          status
-        `)
+        .select(`id, requester_id, receiver_id`)
         .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .eq('status', 'accepted');
 
@@ -452,32 +531,230 @@
         friendsCount.textContent = friendsProfiles ? friendsProfiles.length : 0;
 
         friendsList.innerHTML = (friendsProfiles || []).map(f => `
-          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl">
-            <div class="flex items-center gap-3">
-              <img src="${f.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-10 h-10 rounded-full object-cover">
-              <div>
-                <p class="text-sm font-bold text-cyan-400">${f.username}</p>
-                <p class="text-xs text-slate-500">@${f.handle}</p>
-                ${f.bio ? `<p class="text-xs text-slate-300 mt-1">${f.bio}</p>` : ''}
-              </div>
+          <div onclick="openPrivateChat('${f.id}', '${f.username}', '${f.handle}', '${f.avatar_url || ''}')" class="flex items-center gap-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 p-2.5 rounded-xl cursor-pointer transition-all">
+            <img src="${f.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-8 h-8 rounded-full object-cover">
+            <div class="flex-1 overflow-hidden">
+              <p class="text-xs font-bold text-cyan-400 truncate">${f.username}</p>
+              <p class="text-[10px] text-slate-500 truncate">@${f.handle}</p>
             </div>
-            <span class="text-[10px] bg-slate-800 text-slate-400 px-2.5 py-1 rounded-lg border border-slate-700">Amigo</span>
           </div>
         `).join('');
       } else {
         friendsCount.textContent = 0;
-        friendsList.innerHTML = '<div class="text-slate-500 text-xs py-4 text-center">No tienes amigos añadidos todavía.</div>';
+        friendsList.innerHTML = '<div class="text-slate-500 text-xs py-4 text-center">Sin amigos aún.</div>';
       }
     }
 
     async function respondFriendRequest(requestId, status) {
-      await supabaseClient
-        .from('friendships')
-        .update({ status })
-        .eq('id', requestId);
-
+      await supabaseClient.from('friendships').update({ status }).eq('id', requestId);
       loadFriendsData();
     }
+
+    // CHAT PRIVADO CON AMIGO
+    function openPrivateChat(friendId, name, handle, avatarUrl) {
+      activeFriend = { id: friendId, name, handle, avatarUrl };
+      noFriendSelected.classList.add('hidden');
+      activeDmContainer.classList.remove('hidden');
+
+      dmFriendAvatar.src = avatarUrl || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+      dmFriendName.textContent = name;
+      dmFriendHandle.textContent = `@${handle}`;
+
+      loadDirectMessages();
+    }
+
+    async function loadDirectMessages() {
+      if (!activeFriend || !currentUser) return;
+
+      const { data, error } = await supabaseClient
+        .from('direct_messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${activeFriend.id}),and(sender_id.eq.${activeFriend.id},receiver_id.eq.${currentUser.id})`)
+        .order('created_at', { ascending: true });
+
+      if (error) return;
+
+      dmMessagesContainer.innerHTML = '';
+      (data || []).forEach(renderDirectMessage);
+    }
+
+    function renderDirectMessage(msg) {
+      const isMe = msg.sender_id === currentUser.id;
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
+
+      let contentHtml = '';
+      if (msg.type === 'image' || msg.type === 'gif') {
+        contentHtml = `<img src="${msg.media_url}" class="max-w-xs rounded-xl border border-slate-700 my-1 object-cover">`;
+      } else if (msg.type === 'audio') {
+        contentHtml = `<audio controls src="${msg.media_url}" class="my-1 h-8 max-w-xs"></audio>`;
+      } else {
+        contentHtml = `<p class="text-xs break-words">${msg.content}</p>`;
+      }
+
+      msgDiv.innerHTML = `
+        <div class="max-w-[75%] p-3 rounded-2xl ${isMe ? 'bg-cyan-600 text-slate-950 rounded-br-none' : 'bg-slate-900 text-white border border-slate-800 rounded-bl-none'} space-y-1">
+          ${contentHtml}
+          <span class="text-[9px] opacity-70 block text-right">${new Date(msg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+      `;
+
+      dmMessagesContainer.appendChild(msgDiv);
+      dmMessagesContainer.scrollTop = dmMessagesContainer.scrollHeight;
+    }
+
+    // ENVIAR MENSAJE DE TEXTO PRIVADO
+    document.getElementById('dm-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = dmInput.value.trim();
+      if (!content || !activeFriend) return;
+
+      const { error } = await supabaseClient.from('direct_messages').insert([{
+        sender_id: currentUser.id,
+        receiver_id: activeFriend.id,
+        content,
+        type: 'text'
+      }]);
+
+      if (!error) dmInput.value = '';
+    });
+
+    // FOTOS EN CHAT PRIVADO
+    dmFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file || !activeFriend) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabaseClient.storage.from('chat-media').upload(fileName, file);
+
+      if (!uploadError) {
+        const { data } = supabaseClient.storage.from('chat-media').getPublicUrl(fileName);
+        await supabaseClient.from('direct_messages').insert([{
+          sender_id: currentUser.id,
+          receiver_id: activeFriend.id,
+          media_url: data.publicUrl,
+          type: 'image'
+        }]);
+      }
+    });
+
+    // NOTAS DE VOZ
+    const recordAudioBtn = document.getElementById('record-audio-btn');
+    const cancelRecordBtn = document.getElementById('cancel-record-btn');
+    const stopRecordBtn = document.getElementById('stop-record-btn');
+
+    recordAudioBtn.addEventListener('click', async () => {
+      if (!navigator.mediaDevices) return alert("Tu navegador no soporta grabación de voz.");
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.start();
+
+        recordingSeconds = 0;
+        recordingBar.classList.remove('hidden');
+        recordingTimerInterval = setInterval(() => {
+          recordingSeconds++;
+          const mins = Math.floor(recordingSeconds / 60);
+          const secs = recordingSeconds % 60;
+          recordingTimer.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }, 1000);
+      } catch (err) {
+        alert("Permiso de micrófono denegado o no disponible.");
+      }
+    });
+
+    cancelRecordBtn.addEventListener('click', () => {
+      if (mediaRecorder) mediaRecorder.stop();
+      clearInterval(recordingTimerInterval);
+      recordingBar.classList.add('hidden');
+    });
+
+    stopRecordBtn.addEventListener('click', () => {
+      if (!mediaRecorder) return;
+      
+      mediaRecorder.onstop = async () => {
+        clearInterval(recordingTimerInterval);
+        recordingBar.classList.add('hidden');
+
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const fileName = `${currentUser.id}-${Date.now()}.webm`;
+
+        const { error: uploadError } = await supabaseClient.storage.from('chat-audio').upload(fileName, audioBlob);
+
+        if (!uploadError) {
+          const { data } = supabaseClient.storage.from('chat-audio').getPublicUrl(fileName);
+          await supabaseClient.from('direct_messages').insert([{
+            sender_id: currentUser.id,
+            receiver_id: activeFriend.id,
+            media_url: data.publicUrl,
+            type: 'audio'
+          }]);
+        }
+      };
+
+      mediaRecorder.stop();
+    });
+
+    // EMOJIS & GIFS
+    document.getElementById('emoji-toggle-btn').addEventListener('click', () => {
+      emojiPickerPopup.classList.toggle('hidden');
+      gifPickerPopup.classList.add('hidden');
+    });
+
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        dmInput.value += btn.textContent;
+        emojiPickerPopup.classList.add('hidden');
+      });
+    });
+
+    document.getElementById('gif-toggle-btn').addEventListener('click', () => {
+      gifPickerPopup.classList.toggle('hidden');
+      emojiPickerPopup.classList.add('hidden');
+    });
+
+    document.getElementById('gif-search-input').addEventListener('input', async (e) => {
+      const query = e.target.value.trim();
+      if (!query) return;
+
+      const res = await fetch(`https://g.tenor.com/v1/search?q=${query}&key=LIVDSRZULELA&limit=6`);
+      const data = await res.json();
+      
+      const gifResults = document.getElementById('gif-results');
+      gifResults.innerHTML = (data.results || []).map(g => `
+        <img src="${g.media[0].gif.url}" onclick="sendGif('${g.media[0].gif.url}')" class="rounded-lg border border-slate-700 cursor-pointer h-16 w-full object-cover">
+      `).join('');
+    });
+
+    async function sendGif(gifUrl) {
+      if (!activeFriend) return;
+      await supabaseClient.from('direct_messages').insert([{
+        sender_id: currentUser.id,
+        receiver_id: activeFriend.id,
+        media_url: gifUrl,
+        type: 'gif'
+      }]);
+      gifPickerPopup.classList.add('hidden');
+    }
+
+    // REALTIME PARA DM
+    supabaseClient
+      .channel('public:direct_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages' }, payload => {
+        const msg = payload.new;
+        if (activeFriend && (
+          (msg.sender_id === currentUser.id && msg.receiver_id === activeFriend.id) ||
+          (msg.sender_id === activeFriend.id && msg.receiver_id === currentUser.id)
+        )) {
+          renderDirectMessage(msg);
+        }
+      })
+      .subscribe();
 
     // AUTH
     document.getElementById('email-auth-form').addEventListener('submit', async (e) => {
@@ -545,13 +822,7 @@
     async function loadMessages() {
       const { data, error } = await supabaseClient
         .from('messages')
-        .select(`
-          id,
-          content,
-          created_at,
-          username,
-          user_id
-        `)
+        .select(`id, content, created_at, username, user_id`)
         .order('created_at', { ascending: true });
 
       if (error) return;
