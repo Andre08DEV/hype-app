@@ -4,307 +4,194 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Hype App</title>
-  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: { 50: '#eff6ff', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
-            dark: { bg: '#0f172a', card: '#1e293b', border: '#334155', text: '#f8fafc', muted: '#94a3b8' }
-          }
-        }
-      }
-    }
-  </script>
-  <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .snap-y-mandatory { scroll-snap-type: y mandatory; }
+    .snap-start { scroll-snap-align: start; }
   </style>
 </head>
-<body class="bg-slate-900 dark:bg-slate-900 text-slate-100 min-h-screen pb-20 antialiased transition-colors duration-200">
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 antialiased">
 
-  <!-- MODAL OBLIGATORIO DE ENTRADA / AUTH -->
+  <!-- MODAL AUTH -->
   <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-5">
-      
-      <!-- LOGO Y TÍTULO -->
-      <div class="text-center space-y-2">
-        <div class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 items-center justify-center shadow-lg shadow-blue-500/30 mb-1">
-          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        </div>
-        <h2 id="authTitle" class="text-2xl font-black tracking-tight text-white">Bienvenido a HYPE</h2>
-        <p id="authSubtitle" class="text-xs text-slate-400">Ingresa a tu cuenta para continuar</p>
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="text-center space-y-1">
+        <h2 class="text-2xl font-black text-white">HYPE</h2>
+        <p class="text-xs text-slate-400">Inicia sesión para continuar</p>
       </div>
 
-      <!-- BOTÓN DE INICIO DE SESIÓN CON GOOGLE -->
-      <button type="button" id="btnGoogleLogin" onclick="loginWithGoogle()" class="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3 rounded-xl shadow-md transition text-sm flex items-center justify-center gap-3 active:scale-95">
-        <svg class="w-5 h-5" viewBox="0 0 24 24">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-        </svg>
+      <button type="button" onclick="loginWithGoogle()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl shadow transition text-sm flex items-center justify-center gap-3">
+        <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
         Continuar con Google
       </button>
 
-      <div class="relative flex py-1 items-center">
-        <div class="flex-grow border-t border-slate-700"></div>
-        <span class="flex-shrink mx-3 text-[11px] text-slate-500 font-bold uppercase tracking-wider">O con correo</span>
-        <div class="flex-grow border-t border-slate-700"></div>
-      </div>
-
-      <!-- FORMULARIO DE ACCESO EMAIL/PASSWORD -->
-      <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Correo Electrónico</label>
-          <input type="email" id="authEmail" required placeholder="tu@email.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Contraseña</label>
-          <input type="password" id="authPassword" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        </div>
-
-        <div id="authError" class="hidden text-xs text-red-400 font-medium bg-red-950/50 border border-red-800/50 p-2.5 rounded-xl"></div>
-
-        <button type="submit" id="authSubmitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/30 transition text-sm flex items-center justify-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-          <span>Iniciar Sesión</span>
-        </button>
-      </form>
-
-      <!-- SWITCH ENTRE LOGIN Y REGISTRO -->
-      <div class="text-center text-xs text-slate-400">
-        <span id="authToggleText">¿No tienes cuenta?</span>
-        <button type="button" onclick="toggleAuthMode()" id="authToggleBtn" class="text-blue-400 font-bold hover:underline ml-1">Regístrate</button>
-      </div>
-
-      <div class="border-t border-slate-700 pt-3">
-        <!-- BOTÓN DE INVITADO -->
-        <button type="button" id="btnGuestAccess" onclick="enterAsGuest()" class="w-full bg-slate-700/80 hover:bg-slate-700 text-slate-200 font-semibold py-2.5 rounded-xl border border-slate-600 transition text-xs flex items-center justify-center gap-2 active:scale-95">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          Entrar como Invitado (Modo Lectura)
-        </button>
-      </div>
+      <button type="button" onclick="enterAsGuest()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2.5 rounded-xl border border-slate-600 text-xs">
+        Entrar como Invitado
+      </button>
     </div>
   </div>
 
-  <!-- ENCABEZADO PRINCIPAL -->
-  <header class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-4 py-3">
-    <div class="max-w-2xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-2 cursor-pointer" onclick="scrollToTop()">
-        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        </div>
-        <span class="text-xl font-black bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">HYPE</span>
-      </div>
-
-      <!-- BOTÓN AJUSTES -->
-      <div class="relative">
-        <button onclick="toggleSettingsMenu()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        </button>
-
-        <div id="settingsMenu" class="hidden absolute right-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-4 z-50 space-y-4">
-          <div class="border-b border-slate-700 pb-3">
-            <p class="text-xs font-bold text-slate-400 uppercase">Mi Cuenta</p>
-            <p id="menuUserLabel" class="text-sm font-semibold text-white mt-0.5 truncate">Invitado</p>
-          </div>
-
-          <div class="space-y-2">
-            <span class="text-xs font-semibold text-slate-400">Tema Visual</span>
-            <div class="grid grid-cols-2 gap-2">
-              <button onclick="setTheme('dark')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-900 rounded-xl text-xs font-semibold border border-blue-500 text-blue-400">Oscuro</button>
-              <button onclick="setTheme('light')" class="flex items-center justify-center gap-1.5 p-2 bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 hover:text-white">Claro</button>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-700 pt-3">
-            <button onclick="logoutOrLogin()" id="menuAuthBtn" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-xl text-xs transition">
-              Iniciar Sesión
-            </button>
-          </div>
-        </div>
-      </div>
+  <!-- ENCABEZADO CON CONTADOR DE RACHAS 🔥 -->
+  <header class="sticky top-0 z-40 bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+    <span class="text-xl font-black text-blue-400">HYPE</span>
+    
+    <!-- CONTADOR DE RACHA -->
+    <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-xs font-bold text-orange-400 shadow-inner">
+      <span>🔥</span>
+      <span id="streakCount">0</span>
+      <span class="text-[10px] text-slate-400 uppercase">Días</span>
     </div>
   </header>
 
-  <!-- CONTENIDO PRINCIPAL -->
   <main class="max-w-2xl mx-auto p-4 space-y-6">
 
-    <!-- HISTORIAS -->
-    <section class="border-b border-slate-800 pb-4">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Estados</h2>
-        <span class="text-[10px] text-slate-500 font-medium">24 Horas</span>
-      </div>
-      <div id="storiesContainer" class="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-        <div class="flex-shrink-0 text-center cursor-pointer group" onclick="triggerStoryUpload()">
-          <div class="w-14 h-14 rounded-full bg-slate-800 border-2 border-dashed border-slate-600 group-hover:border-blue-500 flex items-center justify-center text-blue-400 transition">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          </div>
-          <span class="text-xs text-slate-400 mt-1 block">Añadir</span>
-          <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(this.files[0])">
-        </div>
-      </div>
-    </section>
+    <!-- NAVEGACIÓN PESTAÑAS -->
+    <div class="flex border-b border-slate-800 text-sm font-semibold">
+      <button id="tabFeedBtn" onclick="switchTab('feed')" class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500">Feed</button>
+      <button id="tabReelsBtn" onclick="switchTab('reels')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400">Shorts 🎬</button>
+      <button id="tabChatBtn" onclick="switchTab('chat')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400">Chat Privado 💬</button>
+    </div>
 
-    <!-- PESTAÑA FEED Y FORMULARIO -->
-    <div id="tabContentFeed" class="space-y-6">
-      <div id="postFormContainer" class="bg-slate-800 rounded-2xl p-4 border border-slate-700/60 shadow-lg">
-        <form id="postForm" class="space-y-3">
-          <textarea id="postInput" rows="3" placeholder="¿Qué estás pensando?" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"></textarea>
-          <div class="flex items-center justify-end pt-2 border-t border-slate-700/50">
-            <button type="submit" id="btnPublish" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition">Publicar</button>
-          </div>
-        </form>
+    <!-- PESTAÑA FEED -->
+    <div id="tabContentFeed" class="space-y-4">
+      <div id="postFormContainer" class="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-3">
+        <textarea id="postInput" rows="2" placeholder="¿Qué hay de nuevo?" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none"></textarea>
+        <button onclick="publishPost()" class="bg-blue-600 text-xs font-bold px-4 py-2 rounded-xl">Publicar</button>
       </div>
-
-      <!-- AVISO DE INVITADO -->
-      <div id="guestNotice" class="hidden bg-slate-800/80 border border-slate-700 p-4 rounded-xl text-center text-xs text-slate-300">
-        Estás navegado como <strong class="text-blue-400">Invitado</strong>. Para publicar e interactuar, 
-        <button onclick="showAuthModal()" class="text-blue-400 font-bold underline ml-1">Inicia Sesión aquí</button>.
-      </div>
-
       <div id="feedContainer" class="space-y-4"></div>
     </div>
+
+    <!-- PESTAÑA VIDEOS TIPO TIKTOK / SHORTS -->
+    <div id="tabContentReels" class="hidden h-[75vh] overflow-y-scroll snap-y-mandatory no-scrollbar rounded-2xl bg-black border border-slate-800">
+      <!-- Video Item 1 -->
+      <div class="snap-start relative h-full w-full flex items-center justify-center bg-slate-950">
+        <video class="h-full w-full object-cover" loop onclick="this.paused ? this.play() : this.pause()">
+          <source src="https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1187-large.mp4" type="video/mp4">
+        </video>
+        <div class="absolute bottom-4 left-4 z-10 space-y-1">
+          <p class="font-bold text-sm text-white">@dev_user</p>
+          <p class="text-xs text-slate-300">Probando el nuevo feed de videos estilo TikTok 🚀</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA CHAT PRIVADO -->
+    <div id="tabContentChat" class="hidden bg-slate-800 rounded-2xl border border-slate-700 h-[65vh] flex flex-col">
+      <div class="p-3 border-b border-slate-700 font-bold text-xs text-slate-300 flex justify-between items-center">
+        <span>Chat Global Privado</span>
+        <span class="text-[10px] text-green-400">● En vivo</span>
+      </div>
+      
+      <!-- Mensajes -->
+      <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+        <div class="bg-slate-900 p-2.5 rounded-xl max-w-[80%] space-y-0.5">
+          <span class="font-bold text-blue-400 text-[10px]">Sistema</span>
+          <p class="text-slate-200">¡Bienvenido al chat en privado!</p>
+        </div>
+      </div>
+
+      <!-- Input Chat -->
+      <form onsubmit="sendChatMessage(event)" class="p-3 border-t border-slate-700 flex gap-2">
+        <input type="text" id="chatInput" placeholder="Escribe un mensaje privado..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none">
+        <button type="submit" class="bg-blue-600 font-bold px-4 rounded-xl text-xs">Enviar</button>
+      </form>
+    </div>
+
   </main>
 
   <script>
-    // Inicialización segura de cliente Supabase
     const SUPABASE_URL = window.SUPABASE_URL || 'https://tu-proyecto.supabase.co';
     const SUPABASE_KEY = window.SUPABASE_KEY || 'tu-anon-key';
-    
-    let supabaseClient = null;
-    try {
-      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    } catch(e) {
-      console.warn("Supabase no inicializado con credenciales reales.");
-    }
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentUser = null;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      await checkSession();
-      await loadFeed();
+    document.addEventListener('DOMContentLoaded', () => {
+      checkSession();
+      updateStreak();
     });
 
     async function checkSession() {
-      if (!supabaseClient) return;
-      try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
-        if (user) {
-          currentUser = user;
-          hideAuthModal();
-          document.getElementById('postFormContainer').classList.remove('hidden');
-          document.getElementById('guestNotice').classList.add('hidden');
-          document.getElementById('menuUserLabel').innerText = user.email || 'Usuario';
-        } else {
-          showAuthModal();
-        }
-      } catch (e) {
-        showAuthModal();
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (user) {
+        currentUser = user;
+        hideModal();
       }
     }
 
-    function showAuthModal() {
+    function hideModal() {
       const modal = document.getElementById('authModal');
-      modal.classList.remove('hidden');
-      modal.style.display = 'flex';
-    }
-
-    function hideAuthModal() {
-      const modal = document.getElementById('authModal');
-      modal.classList.add('hidden');
       modal.style.display = 'none';
     }
 
-    // FIX 1: ACCESO INVITADO DIRECTO Y FORZADO
     function enterAsGuest() {
-      currentUser = null;
-      hideAuthModal();
-      
-      document.getElementById('postFormContainer').classList.add('hidden');
-      document.getElementById('guestNotice').classList.remove('hidden');
-      document.getElementById('menuUserLabel').innerText = 'Invitado (Solo Lectura)';
-      document.getElementById('menuAuthBtn').innerText = 'Iniciar Sesión';
+      hideModal();
     }
 
-    // FIX 2: LOGIN CON GOOGLE
+    // FIX GOOGLE AUTH REDIRECT
     async function loginWithGoogle() {
-      if (!supabaseClient) {
-        alert("Falta configurar la URL y la Key de Supabase.");
-        return;
-      }
-
-      const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      await supabaseClient.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.href
+          redirectTo: window.location.origin // Redirige exactamente a tu dominio/localhost
         }
       });
-
-      if (error) {
-        const errBox = document.getElementById('authError');
-        errBox.innerText = "Error con Google: " + error.message;
-        errBox.classList.remove('hidden');
-      }
     }
 
-    async function handleAuthSubmit(e) {
-      e.preventDefault();
-      const email = document.getElementById('authEmail').value;
-      const password = document.getElementById('authPassword').value;
-      const errBox = document.getElementById('authError');
-      errBox.classList.add('hidden');
+    // RACHAS (STREAKS)
+    function updateStreak() {
+      const lastVisit = localStorage.getItem('hype_last_visit');
+      let streak = parseInt(localStorage.getItem('hype_streak') || '0');
+      const today = new Date().toDateString();
 
-      if (!supabaseClient) {
-        errBox.innerText = "Error: Configura SUPABASE_URL y SUPABASE_KEY";
-        errBox.classList.remove('hidden');
-        return;
-      }
+      if (lastVisit) {
+        const lastDate = new Date(lastVisit);
+        const diffDays = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24));
 
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        await checkSession();
-      } catch (err) {
-        errBox.innerText = err.message || "Error al autenticar";
-        errBox.classList.remove('hidden');
-      }
-    }
-
-    function toggleSettingsMenu() {
-      document.getElementById('settingsMenu').classList.toggle('hidden');
-    }
-
-    function logoutOrLogin() {
-      if (currentUser && supabaseClient) {
-        supabaseClient.auth.signOut().then(() => location.reload());
+        if (diffDays === 1) {
+          streak += 1;
+        } else if (diffDays > 1) {
+          streak = 1; // Reinicia si pasó más de un día
+        }
       } else {
-        showAuthModal();
+        streak = 1;
       }
+
+      localStorage.setItem('hype_last_visit', today);
+      localStorage.setItem('hype_streak', streak.toString());
+      document.getElementById('streakCount').innerText = streak;
     }
 
-    async function loadFeed() {
-      const container = document.getElementById('feedContainer');
-      if (!supabaseClient) {
-        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">Modo de prueba HTML sin conexión a Supabase activa.</div>`;
-        return;
-      }
-      const { data: posts } = await supabaseClient.from('posts').select('*').order('created_at', { ascending: false });
-      if (!posts || posts.length === 0) {
-        container.innerHTML = `<div class="text-center py-10 text-slate-500 text-sm">No hay publicaciones aún.</div>`;
-      }
+    // MANEJO DE PESTAÑAS
+    function switchTab(tab) {
+      document.getElementById('tabContentFeed').classList.add('hidden');
+      document.getElementById('tabContentReels').classList.add('hidden');
+      document.getElementById('tabContentChat').classList.add('hidden');
+
+      if (tab === 'feed') document.getElementById('tabContentFeed').classList.remove('hidden');
+      if (tab === 'reels') document.getElementById('tabContentReels').classList.remove('hidden');
+      if (tab === 'chat') document.getElementById('tabContentChat').classList.remove('hidden');
     }
 
-    function scrollToTop() {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    // CHAT EN PRIVADO Y TIEMPO REAL
+    async function sendChatMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const chatBox = document.getElementById('chatMessages');
+      chatBox.innerHTML += `
+        <div class="bg-blue-600/30 border border-blue-500/30 p-2.5 rounded-xl max-w-[80%] ml-auto text-right space-y-0.5">
+          <span class="font-bold text-blue-300 text-[10px]">Tú</span>
+          <p class="text-slate-100">${msg}</p>
+        </div>
+      `;
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
   </script>
 </body>
