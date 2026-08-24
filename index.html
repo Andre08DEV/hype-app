@@ -3,15 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype App - Chat & Perfil</title>
+  <title>Hype App - Chat Global & Amigos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-950 text-white font-sans flex flex-col h-screen">
+<body class="bg-slate-950 text-white font-sans flex flex-col h-screen overflow-hidden">
 
   <!-- Header -->
-  <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-    <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE</h1>
+  <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center z-10">
+    <div class="flex items-center gap-4">
+      <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE</h1>
+      <nav id="app-nav" class="hidden flex gap-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
+        <button id="nav-chat-btn" class="px-3 py-1 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition-all">Chat Global</button>
+        <button id="nav-friends-btn" class="px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+          Amigos
+          <span id="friends-badge" class="hidden bg-cyan-500 text-slate-950 text-[10px] font-black px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+      </nav>
+    </div>
+
     <div id="user-bar" class="hidden flex items-center gap-3">
       <button id="open-profile-btn" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-700 transition-all">
         <img id="nav-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-6 h-6 rounded-full object-cover" alt="Avatar">
@@ -21,11 +31,11 @@
     </div>
   </header>
 
-  <!-- PANTALLA 1: INICIO DE SESIÓN -->
+  <!-- PANTALLA 1: LOGIN -->
   <div id="auth-screen" class="flex-1 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm space-y-4 text-center">
       <h2 class="text-xl font-bold text-white">Entrar a Hype</h2>
-      <p class="text-xs text-slate-400">Regístrate o inicia sesión con tu cuenta</p>
+      <p class="text-xs text-slate-400">Ingresa a tu cuenta para chatear y conectar</p>
 
       <button id="google-login-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-all">
         <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1H12v3.7h5.35c-.23 1.22-1.33 3.5-5.35 3.5c-3.22 0-5.85-2.67-5.85-5.95s2.63-5.95 5.85-5.95c1.83 0 3.06.78 3.76 1.45l2.9-2.82C18.8 3.38 15.7 2 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.77 0 9.6-4.06 9.6-9.77c0-.66-.07-1.13-.25-1.13z"/></svg>
@@ -40,7 +50,7 @@
 
       <form id="email-auth-form" class="space-y-3 text-left">
         <div>
-          <label class="text-[10px] text-slate-400 uppercase font-bold">Correo Electrónico</label>
+          <label class="text-[10px] text-slate-400 uppercase font-bold">Correo</label>
           <input id="auth-email" type="email" required placeholder="tu@correo.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
         </div>
         <div>
@@ -48,26 +58,55 @@
           <input id="auth-password" type="password" required placeholder="••••••••" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
         </div>
         <div class="flex gap-2 pt-2">
-          <button id="login-btn" type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Iniciar Sesión</button>
-          <button id="signup-btn" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700 transition-all">Registrarse</button>
+          <button id="login-btn" type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Ingresar</button>
+          <button id="signup-btn" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700 transition-all">Registrar</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- PANTALLA 2: CHAT PRINCIPAL -->
+  <!-- PANTALLA 2: CHAT GLOBAL -->
   <div id="chat-screen" class="hidden flex-1 flex flex-col bg-slate-950 overflow-hidden">
     <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-3">
       <div class="text-slate-500 text-center text-xs my-4">Cargando mensajes...</div>
     </div>
 
     <form id="chat-form" class="p-4 bg-slate-900 border-t border-slate-800 flex gap-2">
-      <input id="message-input" type="text" placeholder="Escribe un mensaje en #general..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 text-white" required />
+      <input id="message-input" type="text" placeholder="Escribe en el chat global..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 text-white" required />
       <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">Enviar</button>
     </form>
   </div>
 
-  <!-- MODAL: EDITAR PERFIL -->
+  <!-- PANTALLA 3: SECCIÓN DE AMIGOS -->
+  <div id="friends-screen" class="hidden flex-1 p-4 max-w-3xl mx-auto w-full overflow-y-auto space-y-6">
+    <!-- Agregar Amigo -->
+    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3">
+      <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide">Añadir Amigo</h3>
+      <form id="add-friend-form" class="flex gap-2">
+        <div class="relative flex-1">
+          <span class="absolute left-3 top-2.5 text-slate-500 text-sm">@</span>
+          <input id="add-friend-handle" type="text" placeholder="handle_del_usuario" required class="w-full bg-slate-800 border border-slate-700 rounded-xl pl-7 pr-3 py-2 text-sm focus:outline-none focus:border-cyan-500">
+        </div>
+        <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2 rounded-xl text-sm transition-all">Enviar Solicitud</button>
+      </form>
+    </div>
+
+    <!-- Solicitudes Pendientes -->
+    <div id="requests-section" class="hidden space-y-2">
+      <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Solicitudes de Amistad</h3>
+      <div id="requests-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Lista de Amigos -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide">Mis Amigos (<span id="friends-count">0</span>)</h3>
+      <div id="friends-list" class="space-y-2">
+        <div class="text-slate-500 text-xs py-4 text-center">No tienes amigos añadidos todavía.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PERFIL DE USUARIO -->
   <div id="profile-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-md space-y-4">
       <div class="flex justify-between items-center border-b border-slate-800 pb-3">
@@ -76,7 +115,6 @@
       </div>
 
       <form id="profile-form" class="space-y-3">
-        <!-- Subir Imagen desde Archivos -->
         <div class="flex items-center gap-4">
           <img id="profile-preview-avatar" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" class="w-16 h-16 rounded-full object-cover border-2 border-cyan-500 flex-shrink-0">
           <div class="flex-1">
@@ -121,13 +159,19 @@
     let currentProfile = null;
     let selectedFile = null;
 
-    // Elementos DOM
+    // DOM
     const authScreen = document.getElementById('auth-screen');
     const chatScreen = document.getElementById('chat-screen');
+    const friendsScreen = document.getElementById('friends-screen');
     const userBar = document.getElementById('user-bar');
+    const appNav = document.getElementById('app-nav');
     const userDisplay = document.getElementById('user-display');
     const navAvatar = document.getElementById('nav-avatar');
     const logoutBtn = document.getElementById('logout-btn');
+
+    const navChatBtn = document.getElementById('nav-chat-btn');
+    const navFriendsBtn = document.getElementById('nav-friends-btn');
+    const friendsBadge = document.getElementById('friends-badge');
 
     const profileModal = document.getElementById('profile-modal');
     const openProfileBtn = document.getElementById('open-profile-btn');
@@ -142,12 +186,15 @@
     const profileHandleInput = document.getElementById('profile-handle');
     const profileBioInput = document.getElementById('profile-bio');
 
+    const messagesContainer = document.getElementById('messages-container');
+
     async function checkUser() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) {
         currentUser = session.user;
         await loadProfile();
-        showChatScreen();
+        showChatTab();
+        loadFriendsData();
       } else {
         showAuthScreen();
       }
@@ -194,17 +241,37 @@
     function showAuthScreen() {
       authScreen.classList.remove('hidden');
       chatScreen.classList.add('hidden');
+      friendsScreen.classList.add('hidden');
       userBar.classList.add('hidden');
+      appNav.classList.add('hidden');
     }
 
-    function showChatScreen() {
+    function showChatTab() {
       authScreen.classList.add('hidden');
       chatScreen.classList.remove('hidden');
+      friendsScreen.classList.add('hidden');
       userBar.classList.remove('hidden');
+      appNav.classList.remove('hidden');
+
+      navChatBtn.className = "px-3 py-1 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition-all";
+      navFriendsBtn.className = "px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all flex items-center gap-1.5";
       loadMessages();
     }
 
-    // Abrir Modal de Perfil
+    function showFriendsTab() {
+      authScreen.classList.add('hidden');
+      chatScreen.classList.add('hidden');
+      friendsScreen.classList.remove('hidden');
+
+      navFriendsBtn.className = "px-3 py-1 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition-all flex items-center gap-1.5";
+      navChatBtn.className = "px-3 py-1 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition-all";
+      loadFriendsData();
+    }
+
+    navChatBtn.addEventListener('click', showChatTab);
+    navFriendsBtn.addEventListener('click', showFriendsTab);
+
+    // MODAL PERFIL
     openProfileBtn.addEventListener('click', () => {
       if (!currentProfile) return;
       selectedFile = null;
@@ -219,7 +286,6 @@
     closeProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
     cancelProfileBtn.addEventListener('click', () => profileModal.classList.add('hidden'));
 
-    // Vista previa al seleccionar archivo local
     profileFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -228,7 +294,6 @@
       }
     });
 
-    // Guardar cambios de perfil (subiendo la imagen a Supabase Storage)
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       saveProfileBtn.disabled = true;
@@ -236,31 +301,19 @@
 
       let avatarUrl = currentProfile?.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
 
-      // Si seleccionó un archivo local, lo subimos al bucket 'avatars'
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
-        const filePath = fileName;
 
         const { error: uploadError } = await supabaseClient
           .storage
           .from('avatars')
-          .upload(filePath, selectedFile, { upsert: true });
+          .upload(fileName, selectedFile, { upsert: true });
 
-        if (uploadError) {
-          alert('Error al subir la imagen: ' + uploadError.message);
-          saveProfileBtn.disabled = false;
-          saveProfileBtn.textContent = 'Guardar Cambios';
-          return;
+        if (!uploadError) {
+          const { data: publicUrlData } = supabaseClient.storage.from('avatars').getPublicUrl(fileName);
+          avatarUrl = publicUrlData.publicUrl;
         }
-
-        // Obtener URL pública
-        const { data: publicUrlData } = supabaseClient
-          .storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-
-        avatarUrl = publicUrlData.publicUrl;
       }
 
       const username = profileUsernameInput.value.trim();
@@ -282,38 +335,173 @@
       saveProfileBtn.disabled = false;
       saveProfileBtn.textContent = 'Guardar Cambios';
 
-      if (error) {
-        alert("Error al actualizar el perfil: " + error.message);
-      } else {
+      if (error) alert("Error al actualizar: " + error.message);
+      else {
         await loadProfile();
         profileModal.classList.add('hidden');
         loadMessages();
       }
     });
 
-    // Autenticación
+    // SISTEMA DE AMIGOS
+    document.getElementById('add-friend-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('add-friend-handle');
+      const handleTarget = input.value.trim().toLowerCase().replace('@', '');
+
+      if (!handleTarget) return;
+
+      if (handleTarget === currentProfile.handle) {
+        return alert("No puedes enviarte una solicitud a ti mismo.");
+      }
+
+      // Buscar el usuario por handle
+      const { data: targetProfile, error: searchError } = await supabaseClient
+        .from('profiles')
+        .select('id')
+        .eq('handle', handleTarget)
+        .single();
+
+      if (searchError || !targetProfile) {
+        return alert("Usuario no encontrado. Revisa el handle.");
+      }
+
+      // Enviar solicitud de amistad
+      const { error: friendError } = await supabaseClient
+        .from('friendships')
+        .insert([{
+          requester_id: currentUser.id,
+          receiver_id: targetProfile.id,
+          status: 'pending'
+        }]);
+
+      if (friendError) {
+        if (friendError.code === '23505') alert("Ya existe una solicitud pendiente o son amigos.");
+        else alert("Error al enviar solicitud: " + friendError.message);
+      } else {
+        alert(`¡Solicitud enviada a @${handleTarget}!`);
+        input.value = '';
+      }
+    });
+
+    async function loadFriendsData() {
+      if (!currentUser) return;
+
+      // Obtener solicitudes entrantes
+      const { data: requests } = await supabaseClient
+        .from('friendships')
+        .select(`
+          id,
+          requester_id,
+          profiles:requester_id (id, username, handle, avatar_url)
+        `)
+        .eq('receiver_id', currentUser.id)
+        .eq('status', 'pending');
+
+      const requestsSection = document.getElementById('requests-section');
+      const requestsList = document.getElementById('requests-list');
+
+      if (requests && requests.length > 0) {
+        requestsSection.classList.remove('hidden');
+        friendsBadge.textContent = requests.length;
+        friendsBadge.classList.remove('hidden');
+
+        requestsList.innerHTML = requests.map(r => `
+          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl">
+            <div class="flex items-center gap-3">
+              <img src="${r.profiles.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-9 h-9 rounded-full object-cover">
+              <div>
+                <p class="text-xs font-bold text-white">${r.profiles.username}</p>
+                <p class="text-[10px] text-slate-500">@${r.profiles.handle}</p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="respondFriendRequest('${r.id}', 'accepted')" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-3 py-1 rounded-lg text-xs">Aceptar</button>
+              <button onclick="respondFriendRequest('${r.id}', 'rejected')" class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-bold px-3 py-1 rounded-lg text-xs">Rechazar</button>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        requestsSection.classList.add('hidden');
+        friendsBadge.classList.add('hidden');
+      }
+
+      // Obtener Amigos aceptados
+      const { data: friendships } = await supabaseClient
+        .from('friendships')
+        .select(`
+          id,
+          requester_id,
+          receiver_id,
+          status
+        `)
+        .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+        .eq('status', 'accepted');
+
+      const friendsList = document.getElementById('friends-list');
+      const friendsCount = document.getElementById('friends-count');
+
+      if (friendships && friendships.length > 0) {
+        const friendUserIds = friendships.map(f => f.requester_id === currentUser.id ? f.receiver_id : f.requester_id);
+
+        const { data: friendsProfiles } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .in('id', friendUserIds);
+
+        friendsCount.textContent = friendsProfiles ? friendsProfiles.length : 0;
+
+        friendsList.innerHTML = (friendsProfiles || []).map(f => `
+          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 p-3 rounded-xl">
+            <div class="flex items-center gap-3">
+              <img src="${f.avatar_url || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'}" class="w-10 h-10 rounded-full object-cover">
+              <div>
+                <p class="text-sm font-bold text-cyan-400">${f.username}</p>
+                <p class="text-xs text-slate-500">@${f.handle}</p>
+                ${f.bio ? `<p class="text-xs text-slate-300 mt-1">${f.bio}</p>` : ''}
+              </div>
+            </div>
+            <span class="text-[10px] bg-slate-800 text-slate-400 px-2.5 py-1 rounded-lg border border-slate-700">Amigo</span>
+          </div>
+        `).join('');
+      } else {
+        friendsCount.textContent = 0;
+        friendsList.innerHTML = '<div class="text-slate-500 text-xs py-4 text-center">No tienes amigos añadidos todavía.</div>';
+      }
+    }
+
+    async function respondFriendRequest(requestId, status) {
+      await supabaseClient
+        .from('friendships')
+        .update({ status })
+        .eq('id', requestId);
+
+      loadFriendsData();
+    }
+
+    // AUTH
     document.getElementById('email-auth-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
 
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      if (error) alert("Error al entrar: " + error.message);
+      if (error) alert("Error: " + error.message);
       else {
         currentUser = data.user;
         await loadProfile();
-        showChatScreen();
+        showChatTab();
       }
     });
 
     document.getElementById('signup-btn').addEventListener('click', async () => {
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
-      if (!email || !password) return alert("Ingresa correo y contraseña para registrarte.");
+      if (!email || !password) return alert("Ingresa correo y contraseña.");
 
       const { data, error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) alert("Error al registrarte: " + error.message);
-      else alert("¡Registro exitoso! Ya puedes iniciar sesión.");
+      if (error) alert("Error: " + error.message);
+      else alert("¡Registro exitoso! Ya puedes ingresar.");
     });
 
     document.getElementById('google-login-btn').addEventListener('click', async () => {
@@ -331,9 +519,7 @@
       showAuthScreen();
     });
 
-    // Chat
-    const messagesContainer = document.getElementById('messages-container');
-
+    // CHAT GLOBAL
     function renderMessage(msg) {
       const msgDiv = document.createElement('div');
       msgDiv.className = 'flex gap-3 items-start bg-slate-900 p-3 rounded-xl border border-slate-800';
@@ -368,10 +554,7 @@
         `)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error(error);
-        return;
-      }
+      if (error) return;
 
       const userIds = [...new Set((data || []).map(m => m.user_id).filter(Boolean))];
       let profilesMap = {};
@@ -382,9 +565,7 @@
           .select('id, username, handle, avatar_url')
           .in('id', userIds);
 
-        (profiles || []).forEach(p => {
-          profilesMap[p.id] = p;
-        });
+        (profiles || []).forEach(p => profilesMap[p.id] = p);
       }
 
       messagesContainer.innerHTML = '';
@@ -403,28 +584,30 @@
       }
     }
 
+    // SUSCRIPCIONES REALTIME
     supabaseClient
       .channel('public:messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async payload => {
         if (!currentUser) return;
         const newMsg = payload.new;
-        
         let profile = {};
         if (newMsg.user_id) {
-          const { data } = await supabaseClient
-            .from('profiles')
-            .select('username, handle, avatar_url')
-            .eq('id', newMsg.user_id)
-            .single();
+          const { data } = await supabaseClient.from('profiles').select('username, handle, avatar_url').eq('id', newMsg.user_id).single();
           if (data) profile = data;
         }
-
         renderMessage({
           ...newMsg,
           username: profile.username || newMsg.username,
           handle: profile.handle,
           avatar_url: profile.avatar_url
         });
+      })
+      .subscribe();
+
+    supabaseClient
+      .channel('public:friendships')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friendships' }, () => {
+        if (currentUser) loadFriendsData();
       })
       .subscribe();
 
