@@ -3,40 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hype App - Chat Real</title>
+  <title>Hype App - Inicio de Sesión & Chat</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-slate-950 text-white font-sans flex flex-col h-screen">
 
+  <!-- Header -->
   <header class="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-    <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE CHAT</h1>
-    <span class="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full font-bold">🟢 En Vivo</span>
+    <h1 class="text-xl font-extrabold text-cyan-400 tracking-wider">⚡ HYPE</h1>
+    <div id="user-bar" class="hidden flex items-center gap-3">
+      <span id="user-display" class="text-xs text-slate-300 font-medium"></span>
+      <button id="logout-btn" class="text-xs bg-red-500/20 text-red-400 hover:bg-red-500/30 px-3 py-1 rounded-lg font-bold transition-all">Cerrar Sesión</button>
+    </div>
   </header>
 
-  <div class="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+  <!-- PANTALLA 1: INICIO DE SESIÓN -->
+  <div id="auth-screen" class="flex-1 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm space-y-4 text-center">
+      <h2 class="text-xl font-bold text-white">Entrar a Hype</h2>
+      <p class="text-xs text-slate-400">Regístrate o inicia sesión con tu cuenta</p>
+
+      <!-- Botón Google -->
+      <button id="google-login-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-semibold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-all">
+        <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1H12v3.7h5.35c-.23 1.22-1.33 3.5-5.35 3.5c-3.22 0-5.85-2.67-5.85-5.95s2.63-5.95 5.85-5.95c1.83 0 3.06.78 3.76 1.45l2.9-2.82C18.8 3.38 15.7 2 12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.77 0 9.6-4.06 9.6-9.77c0-.66-.07-1.13-.25-1.13z"/></svg>
+        Continuar con Google
+      </button>
+
+      <div class="flex items-center gap-2 my-2">
+        <div class="flex-1 h-px bg-slate-800"></div>
+        <span class="text-[10px] text-slate-500 uppercase">o con correo</span>
+        <div class="flex-1 h-px bg-slate-800"></div>
+      </div>
+
+      <!-- Formulario Correo -->
+      <form id="email-auth-form" class="space-y-3 text-left">
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold">Correo Electrónico</label>
+          <input id="auth-email" type="email" required placeholder="tu@correo.com" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold">Contraseña</label>
+          <input id="auth-password" type="password" required placeholder="••••••••" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500 mt-1">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button id="login-btn" type="submit" class="flex-1 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-2 rounded-xl text-sm transition-all">Iniciar Sesión</button>
+          <button id="signup-btn" type="button" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-sm border border-slate-700 transition-all">Registrarse</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PANTALLA 2: CHAT PRINCIPAL -->
+  <div id="chat-screen" class="hidden flex-1 flex flex-col bg-slate-950 overflow-hidden">
     <div id="messages-container" class="flex-1 p-4 overflow-y-auto space-y-3">
-      <div class="text-slate-500 text-center text-xs my-4">Cargando mensajes del servidor...</div>
+      <div class="text-slate-500 text-center text-xs my-4">Cargando mensajes...</div>
     </div>
 
     <form id="chat-form" class="p-4 bg-slate-900 border-t border-slate-800 flex gap-2">
-      <input 
-        id="username-input" 
-        type="text" 
-        placeholder="Tu apodo" 
-        class="w-28 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-cyan-500"
-        required
-      />
-      <input 
-        id="message-input" 
-        type="text" 
-        placeholder="Escribe un mensaje real..." 
-        class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500"
-        required
-      />
-      <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">
-        Enviar
-      </button>
+      <input id="message-input" type="text" placeholder="Escribe un mensaje en #general..." class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 text-white" required />
+      <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm">Enviar</button>
     </form>
   </div>
 
@@ -46,14 +72,82 @@
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const messagesContainer = document.getElementById('messages-container');
-    const chatForm = document.getElementById('chat-form');
-    const messageInput = document.getElementById('message-input');
-    const usernameInput = document.getElementById('username-input');
+    let currentUser = null;
 
-    if (localStorage.getItem('hype_user')) {
-      usernameInput.value = localStorage.getItem('hype_user');
+    // Elementos DOM
+    const authScreen = document.getElementById('auth-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    const userBar = document.getElementById('user-bar');
+    const userDisplay = document.getElementById('user-display');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Comprobar Sesión Activa
+    async function checkUser() {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        showChatScreen();
+      } else {
+        showAuthScreen();
+      }
     }
+
+    function showAuthScreen() {
+      authScreen.classList.remove('hidden');
+      chatScreen.classList.add('hidden');
+      userBar.classList.add('hidden');
+    }
+
+    function showChatScreen() {
+      authScreen.classList.add('hidden');
+      chatScreen.classList.remove('hidden');
+      userBar.classList.remove('hidden');
+      userDisplay.textContent = currentUser.email;
+      loadMessages();
+    }
+
+    // Registro e Inicio de Sesión con Email
+    document.getElementById('email-auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) alert("Error de inicio de sesión: " + error.message);
+      else {
+        currentUser = data.user;
+        showChatScreen();
+      }
+    });
+
+    document.getElementById('signup-btn').addEventListener('click', async () => {
+      const email = document.getElementById('auth-email').value;
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) return alert("Llena el correo y la contraseña para registrarte.");
+
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) alert("Error al registrarte: " + error.message);
+      else alert("¡Cuenta creada con éxito! Si no entra automático, presiona 'Iniciar Sesión'.");
+    });
+
+    // Login con Google
+    document.getElementById('google-login-btn').addEventListener('click', async () => {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.href }
+      });
+      if (error) alert("Error con Google: " + error.message);
+    });
+
+    // Cerrar Sesión
+    logoutBtn.addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      showAuthScreen();
+    });
+
+    // Lógica del Chat
+    const messagesContainer = document.getElementById('messages-container');
 
     function renderMessage(msg) {
       const msgDiv = document.createElement('div');
@@ -75,7 +169,7 @@
     }
 
     async function loadMessages() {
-      const { data, error } = await supabaseClient
+      const { data } = await supabaseClient
         .from('messages')
         .select('*')
         .order('created_at', { ascending: true });
@@ -84,38 +178,34 @@
       if (data && data.length > 0) {
         data.forEach(renderMessage);
       } else {
-        messagesContainer.innerHTML = '<div class="text-slate-500 text-center text-xs my-4">No hay mensajes aún. ¡Escribe el primero!</div>';
+        messagesContainer.innerHTML = '<div class="text-slate-500 text-center text-xs my-4">No hay mensajes. ¡Escribe algo!</div>';
       }
     }
 
     supabaseClient
       .channel('public:messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
-        renderMessage(payload.new);
+        if (currentUser) renderMessage(payload.new);
       })
       .subscribe();
 
-    chatForm.addEventListener('submit', async (e) => {
+    document.getElementById('chat-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const content = messageInput.value.trim();
-      const username = usernameInput.value.trim();
+      const input = document.getElementById('message-input');
+      const content = input.value.trim();
+      if (!content || !currentUser) return;
 
-      if (!content || !username) return;
-
-      localStorage.setItem('hype_user', username);
+      const username = currentUser.email.split('@')[0];
 
       const { error } = await supabaseClient
         .from('messages')
-        .insert([{ content, username }]);
+        .insert([{ content, username, user_id: currentUser.id }]);
 
-      if (error) {
-        alert('Error: Asegúrate de haber ejecutado el script SQL en Supabase.');
-      } else {
-        messageInput.value = '';
-      }
+      if (error) alert("Error al enviar: " + error.message);
+      else input.value = '';
     });
 
-    loadMessages();
+    checkUser();
   </script>
 </body>
 </html>
