@@ -57,7 +57,7 @@ function sidebar() {
     ${NAV.filter((n) => !n.auth || u).map((n) => html`<a class="nav-link" href="${navHref(n)}" data-nav="${n.name}">${icon(n.icon, { size: 22 })}<span class="label">${n.label}</span>${n.badge ? html`<span class="badge hidden" data-badge="${n.badge}"></span>` : ''}</a>`)}
     <button class="btn btn-primary btn-lg compose-btn" data-create aria-label="Crear">${icon('plus', { size: 20 })}<span class="label">Crear</span></button>
     <div class="sidebar-footer">
-      <span class="streak" title="Racha de días seguidos visitando Hype">🔥 <span data-streak>${state.streak}</span> <span class="label">días</span></span>
+      <span class="streak" title="Racha de días seguidos visitando Hype">🔥 <span data-streak>${state.streak}</span> <span class="label">${state.streak === 1 ? 'día' : 'días'}</span></span>
       ${u ? html`<a class="me-card" href="#/u/${encodeURIComponent(u.username)}" data-me>${avatar(u, 'md')}<span class="meta"><b class="ellipsis" style="display:block;max-width:150px">${u.displayName}</b><span class="dim small">@${u.username}</span></span></a>`
         : html`<a class="btn btn-secondary" href="#/bienvenida">${icon('user', { size: 18 })}<span class="label">Entrar</span></a>`}
       <span class="tiny dim" style="padding:0 10px" data-mode-label>${state.mode === 'cloud' ? `☁️ Nube · ${api.host}` : '💾 Modo demo local'}</span>
@@ -145,7 +145,7 @@ function openDrawer() {
   const content = toElement(html`<div class="col">
     ${u ? html`<a class="me-card" href="#/u/${encodeURIComponent(u.username)}" data-close-drawer>${avatar(u, 'lg')}<span class="meta"><b>${u.displayName}</b><br><span class="dim small">@${u.username}</span></span></a>` : html`<a class="btn btn-primary" href="#/bienvenida" data-close-drawer>Entrar o crear cuenta</a>`}
     <div class="drawer-grid">${NAV.filter((n) => !n.auth || u).map((n) => html`<a href="${navHref(n)}" data-close-drawer>${icon(n.icon, { size: 22 })}${n.label}${n.badge ? html`<span class="badge hidden" data-badge="${n.badge}"></span>` : ''}</a>`)}</div>
-    <div class="row" style="justify-content:space-between"><span class="streak">🔥 ${state.streak} días de racha</span><span class="tiny dim">${state.mode === 'cloud' ? '☁️ Nube' : '💾 Demo local'}</span></div>
+    <div class="row" style="justify-content:space-between"><span class="streak">🔥 ${state.streak} ${state.streak === 1 ? 'día' : 'días'} de racha</span><span class="tiny dim">${state.mode === 'cloud' ? '☁️ Nube' : '💾 Demo local'}</span></div>
   </div>`);
   const m = openModal({ title: 'Menú', content, size: 'sm' });
   paintBadges();

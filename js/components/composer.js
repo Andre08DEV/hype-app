@@ -558,7 +558,7 @@ export async function openShortComposer() {
         </div>
         <div class="col" style="flex:1;min-width:240px">
           <div data-editor></div>
-          <div><div class="label" style="margin-bottom:6px">Filtro</div><div class="filter-strip" data-filters></div></div>
+          <div><div class="flabel" style="margin-bottom:6px">Filtro</div><div class="filter-strip" data-filters></div></div>
           <label class="row small" style="gap:8px;cursor:pointer"><span class="switch"><input type="checkbox" data-sensitive><span class="track"></span><span class="thumb"></span></span>Contenido sensible</label>
           <p class="tiny dim" data-info></p>
         </div>

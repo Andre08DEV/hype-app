@@ -32,6 +32,14 @@
   </script>
   <script src="config.js"></script>
   <script type="module" src="js/main.js"></script>
+  <script>
+    // Los módulos JS no cargan desde file:// — avisamos con instrucciones.
+    if (location.protocol === 'file:') {
+      addEventListener('DOMContentLoaded', function () {
+        document.getElementById('app').innerHTML = '<div class="boot" style="padding:24px;text-align:center"><img src="assets/icon.svg" width="64" height="64" alt=""><h2 style="margin:8px 0">Abre Hype desde un servidor</h2><p class="boot-text" style="max-width:420px">Los navegadores bloquean los módulos JavaScript al abrir el archivo directamente. Publícalo en GitHub Pages o ejecuta <code>npx serve</code> (o <code>python3 -m http.server</code>) en esta carpeta y abre la dirección que te indique.</p></div>';
+      });
+    }
+  </script>
 </head>
 <body>
   <div id="app">

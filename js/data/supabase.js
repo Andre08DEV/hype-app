@@ -6,7 +6,7 @@ import { uuid, excerpt, slugify } from '../core/utils.js';
 export const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm';
 
 const PROFILE_COLS = 'id,username,display_name,avatar_url,avatar_emoji,verified';
-const POST_SELECT = `*,author:profiles!posts_author_fk(${PROFILE_COLS}),group:groups!posts_group_fk(id,slug,name,emoji,color,is_private),project:projects!posts_project_fk(id,name,tagline,emoji,color,cover_url,hype_count,stage)`;
+const POST_SELECT = `*,author:profiles!posts_author_fk(${PROFILE_COLS}),grp:groups!posts_group_fk(id,slug,name,emoji,color,is_private),project:projects!posts_project_fk(id,name,tagline,emoji,color,cover_url,hype_count,stage)`;
 const PROJECT_SELECT = `*,owner:profiles!projects_owner_fk(${PROFILE_COLS})`;
 const GROUP_SELECT = `*,owner:profiles!groups_owner_fk(${PROFILE_COLS})`;
 const D = 24 * 3600e3;
@@ -143,7 +143,7 @@ export class SupabaseBackend {
       counts: r.poll_counts || (r.poll.options || []).map(() => 0), voters: r.poll_voters || 0,
       myVotes: v.votes?.get(r.id) || [], closed: new Date(r.poll.closes_at).getTime() < Date.now(),
     } : null;
-    const g = r.group;
+    const g = r.grp;
     const pr = r.project;
     return {
       id: r.id, kind: r.kind, authorId: r.author_id, author: this._profileLite(r.author), body: r.body || '', media: r.media || [], poll,
@@ -201,7 +201,7 @@ export class SupabaseBackend {
       postId: r.post_id, projectId: r.project_id, groupId: r.group_id,
       post: r.post ? { id: r.post.id, kind: r.post.kind, excerpt: excerpt(r.post.body, 120) } : null,
       project: r.project ? { id: r.project.id, name: r.project.name } : null,
-      group: r.group ? { id: r.group.id, slug: r.group.slug, name: r.group.name } : null,
+      group: r.grp ? { id: r.grp.id, slug: r.grp.slug, name: r.grp.name } : null,
     };
   }
 
@@ -831,7 +831,7 @@ export class SupabaseBackend {
 
   // ---------------- notificaciones ----------------
   _notifSelect() {
-    return `*,actor:profiles!notifications_actor_fk(${PROFILE_COLS}),post:posts(id,kind,body),project:projects(id,name),group:groups(id,slug,name)`;
+    return `*,actor:profiles!notifications_actor_fk(${PROFILE_COLS}),post:posts(id,kind,body),project:projects(id,name),grp:groups(id,slug,name)`;
   }
 
   async listNotifications({ offset = 0, limit = 30, type = 'all' } = {}) {

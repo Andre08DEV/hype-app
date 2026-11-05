@@ -56,7 +56,7 @@ export function render(el) {
       <button class="icon-btn sm" data-toggle-filters title="Más filtros" aria-label="Más filtros">${icon('sliders', { size: 18 })}</button>
     </div>
     <div class="filter-panel hidden" data-panel>
-      <div class="col" style="gap:6px"><span class="label">Período</span><div class="segmented" data-periods>${PERIODS.map((p) => html`<button data-period="${p.id}" class="${p.id === st.period ? 'active' : ''}">${p.label}</button>`)}</div></div>
+      <div class="col" style="gap:6px"><span class="flabel">Período</span><div class="segmented" data-periods>${PERIODS.map((p) => html`<button data-period="${p.id}" class="${p.id === st.period ? 'active' : ''}">${p.label}</button>`)}</div></div>
       <div class="row small muted" style="gap:8px;flex-wrap:wrap">${icon('filter', { size: 16 })}
         <span data-muted-summary></span>
         <a href="#/ajustes/contenido" style="color:var(--accent-text);font-weight:700">Editar filtros de contenido →</a></div>
