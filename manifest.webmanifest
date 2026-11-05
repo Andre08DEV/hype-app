@@ -1,0 +1,15 @@
+{
+  "name": "Hype — red social",
+  "short_name": "Hype",
+  "description": "Posts con Markdown, hilos, shorts, proyectos, grupos, juegos y Hype IA.",
+  "lang": "es",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07080d",
+  "theme_color": "#07080d",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
