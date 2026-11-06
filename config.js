@@ -18,8 +18,8 @@
  * También puedes configurar la nube desde la app: Ajustes → Nube.
  */
 window.HYPE_CONFIG = {
-  supabaseUrl: '',       // ej. 'https://abcdefgh.supabase.co'
-  supabaseAnonKey: '',   // ej. 'eyJhbGciOi...' o 'sb_publishable_...'
-  giphyApiKey: '',       // opcional: búsqueda de GIFs (https://developers.giphy.com)
+  supabaseUrl: '',       // https://vqxfczrtjgwpszdvksuy.supabase.co'
+  supabaseAnonKey: '',   // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGZjenJ0amd3cHN6ZHZrc3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MjgxNDYsImV4cCI6MjEwMzEwNDE0Nn0.CwfcwVVxq0rkvM6A_7j5wJDEP9HH8weIimsJGpC6iuk'
+  giphyApiKey: '',       // OJbOJ6CVqu6KKSQ1MrcNFIO8NHXEkZ5sm)
   aiModel: 'gemini-3.8-flash',
 };
