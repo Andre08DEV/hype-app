@@ -267,7 +267,10 @@ export class SupabaseBackend {
   }
 
   async signInWithProvider(provider) {
-    const { error } = await this.sb.auth.signInWithOAuth({ provider, options: { redirectTo: this.appUrl } });
+    // select_account: Google muestra el selector de cuentas en vez de entrar
+    // automáticamente con la cuenta que ya está abierta en el navegador.
+    const queryParams = provider === 'google' ? { prompt: 'select_account' } : undefined;
+    const { error } = await this.sb.auth.signInWithOAuth({ provider, options: { redirectTo: this.appUrl, ...(queryParams ? { queryParams } : {}) } });
     if (error) throw new Error(this._authMsg(error));
   }
 

@@ -133,7 +133,8 @@ function secNube() {
       <div class="field"><label for="sb-key">Clave pública (anon / publishable)</label><input class="input" id="sb-key" name="key" value="${state.settings.cloud.anonKey || cfg.key}" placeholder="eyJhbGciOi… o sb_publishable_…" autocomplete="off"><span class="hint">Es pública por diseño (la protege RLS). <b>Nunca</b> pegues aquí la service_role/secret key.</span></div>
       <div class="row-wrap"><button type="button" class="btn btn-secondary" data-cloud-test>${icon('activity', { size: 16 })} Probar conexión</button><button type="submit" class="btn btn-primary">${icon('cloud', { size: 16 })} Conectar y recargar</button>
       ${cloud || cfg.configured ? html`<button type="button" class="btn btn-ghost" data-cloud-local>Usar modo local</button>` : ''}</div>
-      ${cfg.source === 'config.js' ? html`<span class="hint">Valores leídos de <code>config.js</code>.</span>` : ''}
+      ${cfg.source === 'config.js' ? html`<div class="notice">${icon('check')}<span>Conexión fijada en <code>config.js</code>: funciona en cualquier navegador, perfil de Chrome, dispositivo o cuenta.</span></div>` : ''}
+      ${cfg.source === 'ajustes' ? html`<div class="notice warn">${icon('alert')}<span><b>Esta conexión está guardada solo en este navegador.</b> En otro navegador, perfil de Chrome, dispositivo o en incógnito no estará y la app abrirá en modo demo. Para que sea permanente, pon la URL y la clave dentro de las comillas en <code>config.js</code>.</span></div>` : ''}
       <div data-cloud-result></div>
     </form>`)}
     ${group('Guía rápida', html`<div class="set-block small muted" style="line-height:1.7">

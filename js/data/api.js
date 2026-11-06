@@ -9,7 +9,10 @@ export function cloudConfig() {
   const s = state.settings.cloud || {};
   const url = (s.url || cfg.supabaseUrl || '').trim();
   const key = (s.anonKey || cfg.supabaseAnonKey || '').trim();
-  return { url, key, configured: !!(url && key), forceLocal: !!s.forceLocal, source: s.url ? 'ajustes' : cfg.supabaseUrl ? 'config.js' : null };
+  const norm = (u) => String(u || '').trim().replace(/\/+$/, '');
+  const fromConfig = !!cfg.supabaseUrl && (!s.url || norm(s.url) === norm(cfg.supabaseUrl));
+  const source = fromConfig ? 'config.js' : s.url ? 'ajustes' : null;
+  return { url, key, configured: !!(url && key), forceLocal: !!s.forceLocal, source };
 }
 
 export async function initApi() {
