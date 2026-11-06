@@ -1,198 +1,57 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Hype App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .snap-y-mandatory { scroll-snap-type: y mandatory; }
-    .snap-start { scroll-snap-align: start; }
-  </style>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-20 antialiased">
-
-  <!-- MODAL AUTH -->
-  <div id="authModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
-      <div class="text-center space-y-1">
-        <h2 class="text-2xl font-black text-white">HYPE</h2>
-        <p class="text-xs text-slate-400">Inicia sesión para continuar</p>
-      </div>
-
-      <button type="button" onclick="loginWithGoogle()" class="w-full bg-white text-slate-900 font-bold py-3 rounded-xl shadow transition text-sm flex items-center justify-center gap-3">
-        <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-        Continuar con Google
-      </button>
-
-      <button type="button" onclick="enterAsGuest()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold py-2.5 rounded-xl border border-slate-600 text-xs">
-        Entrar como Invitado
-      </button>
-    </div>
-  </div>
-
-  <!-- ENCABEZADO CON CONTADOR DE RACHAS 🔥 -->
-  <header class="sticky top-0 z-40 bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
-    <span class="text-xl font-black text-blue-400">HYPE</span>
-    
-    <!-- CONTADOR DE RACHA -->
-    <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-xs font-bold text-orange-400 shadow-inner">
-      <span>🔥</span>
-      <span id="streakCount">0</span>
-      <span class="text-[10px] text-slate-400 uppercase">Días</span>
-    </div>
-  </header>
-
-  <main class="max-w-2xl mx-auto p-4 space-y-6">
-
-    <!-- NAVEGACIÓN PESTAÑAS -->
-    <div class="flex border-b border-slate-800 text-sm font-semibold">
-      <button id="tabFeedBtn" onclick="switchTab('feed')" class="flex-1 pb-3 text-center border-b-2 border-blue-500 text-blue-500">Feed</button>
-      <button id="tabReelsBtn" onclick="switchTab('reels')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400">Shorts 🎬</button>
-      <button id="tabChatBtn" onclick="switchTab('chat')" class="flex-1 pb-3 text-center border-b-2 border-transparent text-slate-400">Chat Privado 💬</button>
-    </div>
-
-    <!-- PESTAÑA FEED -->
-    <div id="tabContentFeed" class="space-y-4">
-      <div id="postFormContainer" class="bg-slate-800 rounded-2xl p-4 border border-slate-700 space-y-3">
-        <textarea id="postInput" rows="2" placeholder="¿Qué hay de nuevo?" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm focus:outline-none"></textarea>
-        <button onclick="publishPost()" class="bg-blue-600 text-xs font-bold px-4 py-2 rounded-xl">Publicar</button>
-      </div>
-      <div id="feedContainer" class="space-y-4"></div>
-    </div>
-
-    <!-- PESTAÑA VIDEOS TIPO TIKTOK / SHORTS -->
-    <div id="tabContentReels" class="hidden h-[75vh] overflow-y-scroll snap-y-mandatory no-scrollbar rounded-2xl bg-black border border-slate-800">
-      <!-- Video Item 1 -->
-      <div class="snap-start relative h-full w-full flex items-center justify-center bg-slate-950">
-        <video class="h-full w-full object-cover" loop onclick="this.paused ? this.play() : this.pause()">
-          <source src="https://assets.mixkit.co/videos/preview/mixkit-tree-branches-in-the-breeze-1187-large.mp4" type="video/mp4">
-        </video>
-        <div class="absolute bottom-4 left-4 z-10 space-y-1">
-          <p class="font-bold text-sm text-white">@dev_user</p>
-          <p class="text-xs text-slate-300">Probando el nuevo feed de videos estilo TikTok 🚀</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- PESTAÑA CHAT PRIVADO -->
-    <div id="tabContentChat" class="hidden bg-slate-800 rounded-2xl border border-slate-700 h-[65vh] flex flex-col">
-      <div class="p-3 border-b border-slate-700 font-bold text-xs text-slate-300 flex justify-between items-center">
-        <span>Chat Global Privado</span>
-        <span class="text-[10px] text-green-400">● En vivo</span>
-      </div>
-      
-      <!-- Mensajes -->
-      <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
-        <div class="bg-slate-900 p-2.5 rounded-xl max-w-[80%] space-y-0.5">
-          <span class="font-bold text-blue-400 text-[10px]">Sistema</span>
-          <p class="text-slate-200">¡Bienvenido al chat en privado!</p>
-        </div>
-      </div>
-
-      <!-- Input Chat -->
-      <form onsubmit="sendChatMessage(event)" class="p-3 border-t border-slate-700 flex gap-2">
-        <input type="text" id="chatInput" placeholder="Escribe un mensaje privado..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none">
-        <button type="submit" class="bg-blue-600 font-bold px-4 rounded-xl text-xs">Enviar</button>
-      </form>
-    </div>
-
-  </main>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07080d">
+  <meta name="description" content="Hype — la red social para crear, compartir y darle hype a lo que importa: posts con Markdown, hilos, shorts, proyectos, grupos, juegos y Hype IA.">
+  <title>Hype</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap">
+  <link rel="stylesheet" href="css/app.css">
   <script>
-    const SUPABASE_URL = window.SUPABASE_URL || 'https://tu-proyecto.supabase.co';
-    const SUPABASE_KEY = window.SUPABASE_KEY || 'tu-anon-key';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    let currentUser = null;
-
-    document.addEventListener('DOMContentLoaded', () => {
-      checkSession();
-      updateStreak();
-    });
-
-    async function checkSession() {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (user) {
-        currentUser = user;
-        hideModal();
-      }
-    }
-
-    function hideModal() {
-      const modal = document.getElementById('authModal');
-      modal.style.display = 'none';
-    }
-
-    function enterAsGuest() {
-      hideModal();
-    }
-
-    // FIX GOOGLE AUTH REDIRECT
-    async function loginWithGoogle() {
-      await supabaseClient.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin // Redirige exactamente a tu dominio/localhost
+    // Aplica tema y acento antes de pintar para evitar parpadeos.
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('hype:settings') || '{}');
+        var root = document.documentElement;
+        var theme = s.theme || 'dark';
+        if (theme === 'system') theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        root.dataset.theme = theme;
+        if (s.accentColors && s.accentColors.length === 2) {
+          root.style.setProperty('--accent', s.accentColors[0]);
+          root.style.setProperty('--accent-2', s.accentColors[1]);
         }
+        if (s.fontScale) root.style.setProperty('--font-scale', s.fontScale);
+      } catch (e) { /* sin ajustes guardados */ }
+    })();
+  </script>
+  <script src="config.js"></script>
+  <script type="module" src="js/main.js"></script>
+  <script>
+    // Los módulos JS no cargan desde file:// — avisamos con instrucciones.
+    if (location.protocol === 'file:') {
+      addEventListener('DOMContentLoaded', function () {
+        document.getElementById('app').innerHTML = '<div class="boot" style="padding:24px;text-align:center"><img src="assets/icon.svg" width="64" height="64" alt=""><h2 style="margin:8px 0">Abre Hype desde un servidor</h2><p class="boot-text" style="max-width:420px">Los navegadores bloquean los módulos JavaScript al abrir el archivo directamente. Publícalo en GitHub Pages o ejecuta <code>npx serve</code> (o <code>python3 -m http.server</code>) en esta carpeta y abre la dirección que te indique.</p></div>';
       });
     }
-
-    // RACHAS (STREAKS)
-    function updateStreak() {
-      const lastVisit = localStorage.getItem('hype_last_visit');
-      let streak = parseInt(localStorage.getItem('hype_streak') || '0');
-      const today = new Date().toDateString();
-
-      if (lastVisit) {
-        const lastDate = new Date(lastVisit);
-        const diffDays = Math.floor((new Date() - lastDate) / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 1) {
-          streak += 1;
-        } else if (diffDays > 1) {
-          streak = 1; // Reinicia si pasó más de un día
-        }
-      } else {
-        streak = 1;
-      }
-
-      localStorage.setItem('hype_last_visit', today);
-      localStorage.setItem('hype_streak', streak.toString());
-      document.getElementById('streakCount').innerText = streak;
-    }
-
-    // MANEJO DE PESTAÑAS
-    function switchTab(tab) {
-      document.getElementById('tabContentFeed').classList.add('hidden');
-      document.getElementById('tabContentReels').classList.add('hidden');
-      document.getElementById('tabContentChat').classList.add('hidden');
-
-      if (tab === 'feed') document.getElementById('tabContentFeed').classList.remove('hidden');
-      if (tab === 'reels') document.getElementById('tabContentReels').classList.remove('hidden');
-      if (tab === 'chat') document.getElementById('tabContentChat').classList.remove('hidden');
-    }
-
-    // CHAT EN PRIVADO Y TIEMPO REAL
-    async function sendChatMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('chatInput');
-      const msg = input.value.trim();
-      if (!msg) return;
-
-      const chatBox = document.getElementById('chatMessages');
-      chatBox.innerHTML += `
-        <div class="bg-blue-600/30 border border-blue-500/30 p-2.5 rounded-xl max-w-[80%] ml-auto text-right space-y-0.5">
-          <span class="font-bold text-blue-300 text-[10px]">Tú</span>
-          <p class="text-slate-100">${msg}</p>
-        </div>
-      `;
-      input.value = '';
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
   </script>
+</head>
+<body>
+  <div id="app">
+    <div class="boot" role="status" aria-live="polite">
+      <img src="assets/icon.svg" alt="" width="64" height="64" class="boot-logo">
+      <p class="boot-text">Cargando Hype…</p>
+    </div>
+  </div>
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="polite"></div>
+  <noscript>
+    <p style="padding:24px;font-family:system-ui">Hype necesita JavaScript para funcionar.</p>
+  </noscript>
 </body>
 </html>
