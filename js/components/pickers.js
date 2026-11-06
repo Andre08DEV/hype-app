@@ -48,7 +48,12 @@ export function openGifPicker() {
     const search = debounce(async (q) => {
       if (hasKey) {
         grid.innerHTML = '<div class="spinner"></div>';
-        try { paint(await giphy(q)); } catch (err) { grid.innerHTML = `<div class="notice danger">${esc(err.message)}</div>`; }
+        try { paint(await giphy(q)); } catch (err) {
+          // Si GIPHY falla, seguimos ofreciendo los GIFs integrados
+          const n = normalize(q);
+          paint(DEMO_GIFS.filter((g) => !n || normalize(`${g.title} ${g.tags}`).includes(n)).map((g) => ({ ...g, preview: g.url })));
+          grid.insertAdjacentHTML('afterbegin', `<div class="notice warn" style="margin-bottom:8px;column-span:all">${esc(err.message)}. Mostrando los GIFs incluidos.</div>`);
+        }
       } else {
         const n = normalize(q);
         paint(DEMO_GIFS.filter((g) => !n || normalize(`${g.title} ${g.tags}`).includes(n)).map((g) => ({ ...g, preview: g.url })));
