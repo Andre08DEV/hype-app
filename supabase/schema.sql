@@ -303,6 +303,58 @@ create table if not exists public.calls (
 create index if not exists calls_callee_idx on public.calls (callee_id, created_at desc);
 create index if not exists calls_caller_idx on public.calls (caller_id, created_at desc);
 
+-- Proyectos que vienen de la versión antigua de Hype: tenían otra tabla «stories»
+-- (user_id, media_url, type…). No la borramos: la renombramos a stories_legacy
+-- (con sus índices, para liberar nombres como stories_pkey) y creamos la nueva.
+do $$
+declare
+  v_t text;
+  v_new text;
+  v_idx record;
+begin
+  foreach v_t in array array['stories', 'story_views'] loop
+    if to_regclass(format('public.%I', v_t)) is not null
+       and not exists (
+         select 1 from information_schema.columns
+         where table_schema = 'public' and table_name = v_t
+           and column_name = case v_t when 'stories' then 'author_id' else 'viewer_id' end
+       ) then
+      v_new := v_t || '_legacy';
+      if to_regclass(format('public.%I', v_new)) is not null then
+        v_new := v_t || '_legacy_' || to_char(now(), 'YYYYMMDDHH24MISS');
+      end if;
+      execute format('alter table public.%I rename to %I', v_t, v_new);
+      for v_idx in
+        select c.relname from pg_index i join pg_class c on c.oid = i.indexrelid
+        where i.indrelid = format('public.%I', v_new)::regclass
+      loop
+        execute format('alter index public.%I rename to %I', v_idx.relname, left('legacy_' || v_idx.relname, 63));
+      end loop;
+      raise notice 'Tabla antigua public.% renombrada a public.%', v_t, v_new;
+    end if;
+  end loop;
+end $$;
+
+-- Tablas de la versión antigua que la app ya no usa: se conservan los datos, pero
+-- se cierra el acceso desde la API (algunas, como direct_messages, eran legibles
+-- por cualquiera con la clave pública).
+do $$
+declare
+  v_t text;
+begin
+  for v_t in
+    select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind in ('r', 'p')
+      and (c.relname in ('direct_messages', 'post_likes', 'post_comments', 'friendships', 'likes')
+           or c.relname like 'stories\_legacy%' or c.relname like 'story\_views\_legacy%')
+  loop
+    execute format('alter table public.%I enable row level security', v_t);
+    execute format('revoke all on table public.%I from public', v_t);
+    if exists (select 1 from pg_roles where rolname = 'anon') then execute format('revoke all on table public.%I from anon', v_t); end if;
+    if exists (select 1 from pg_roles where rolname = 'authenticated') then execute format('revoke all on table public.%I from authenticated', v_t); end if;
+  end loop;
+end $$;
+
 -- Historias de 24 horas (foto, vídeo o texto sobre fondo de color).
 create table if not exists public.stories (
   id uuid primary key default gen_random_uuid(),

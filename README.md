@@ -111,6 +111,11 @@ Si ya tenías Hype en Supabase, vuelve a ejecutar [`supabase/schema.sql`](supaba
 - Los reposts y las citas (`repost_of`, `quote_of`, `repost_count`) y el post fijado (`pinned_post_id`).
 - Los adjuntos en mensajes (`messages.media`) y el bucket privado `dm-media`.
 
+Si tu proyecto viene de la **versión antigua de Hype**, el script también:
+
+- Renombra la tabla `stories` antigua (`user_id`, `media_url`…) a `stories_legacy` sin borrar nada y crea la nueva. Antes daba el error `column "author_id" does not exist`.
+- Cierra el acceso desde la API a las tablas antiguas que ya no se usan (`direct_messages`, `post_likes`, `post_comments`, `friendships`, `likes`, `stories_legacy`). Algunas, como los mensajes privados antiguos, se podían leer con la clave pública. Los datos se conservan; si no los necesitas, puedes borrar esas tablas desde el Table Editor.
+
 Hasta que lo ejecutes, la web sigue funcionando como antes. Las funciones nuevas muestran el aviso «vuelve a ejecutar supabase/schema.sql».
 
 ## 📹 Videollamadas

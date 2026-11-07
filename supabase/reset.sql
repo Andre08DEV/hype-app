@@ -34,8 +34,11 @@ drop table if exists
   public.groups,
   public.profiles,
   -- tablas de versiones antiguas de la app
-  public.stories,
+  public.stories_legacy,
+  public.story_views_legacy,
   public.direct_messages,
+  public.post_likes,
+  public.post_comments,
   public.friendships,
   public.likes
 cascade;
