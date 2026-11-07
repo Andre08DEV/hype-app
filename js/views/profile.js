@@ -13,6 +13,7 @@ import { createInfiniteList, endOfFeed } from '../components/infinite.js';
 import { squareCrop, processImage, filterClass } from '../components/media.js';
 import { GAMES } from '../games/registry.js';
 import { gradientFor } from '../core/utils.js';
+import { computeAchievements, loadAchievementStats, badgeRow, achievementsGrid } from '../components/achievements.js';
 
 export function openEditProfile() {
   const u = state.user;
@@ -137,15 +138,39 @@ export async function render(el, ctx) {
         <button data-list="followers"><b data-followers>${formatCount(u.followers)}</b> seguidores</button>
         <span>🔥 <b>${formatCount(u.hypeReceived)}</b> hype recibido</span>
       </div>
+      <div data-badges>${badgeRow(computeAchievements(u))}</div>
     </div>
-    <div class="tabs">${[['posts', 'Posts'], ['shorts', 'Shorts'], ['proyectos', 'Proyectos'], ['juegos', 'Juegos'], ...(me ? [['hype', '🔥 Hype dado']] : [])].map(([k, l]) => html`<button class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</button>`)}</div>
+    <div class="tabs" data-profile-tabs>${[['posts', 'Posts'], ['shorts', 'Shorts'], ['proyectos', 'Proyectos'], ['juegos', 'Juegos'], ['logros', '🏅 Logros'], ...(me ? [['hype', '🔥 Hype dado']] : [])].map(([k, l]) => html`<button class="tab ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</button>`)}</div>
     <div data-tabbody></div>`);
+
+  // Logros: primero con las estadísticas del perfil y luego con proyectos, shorts y récords.
+  const statsP = loadAchievementStats(u).then((s) => {
+    const host = $('[data-badges]', el);
+    if (host) host.innerHTML = String(badgeRow(computeAchievements(u, s)));
+    return s;
+  }).catch(() => null);
 
   const paintTab = async () => {
     list?.destroy();
     list = null;
     const body = $('[data-tabbody]', el);
     body.innerHTML = '';
+    if (tab === 'posts' && u.pinnedPostId) {
+      const slot = document.createElement('div');
+      slot.dataset.pinnedSlot = '';
+      body.appendChild(slot);
+      api.getPost(u.pinnedPostId).then((p) => {
+        if (!slot.isConnected || p.kind === 'repost') return;
+        slot.innerHTML = String(renderPost(p, { pinned: true }));
+        hydratePosts(slot);
+      }).catch(() => { /* el post fijado ya no existe */ });
+    }
+    if (tab === 'logros') {
+      body.innerHTML = '<div class="spinner"></div>';
+      const s = await statsP;
+      if (tab === 'logros') body.innerHTML = String(achievementsGrid(computeAchievements(u, s)));
+      return;
+    }
     if (tab === 'posts' || tab === 'hype') {
       list = createInfiniteList({
         container: body,
@@ -172,7 +197,13 @@ export async function render(el, ctx) {
 
   el.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-tab]');
-    if (t) { tab = t.dataset.tab; $$('[data-tab]', el).forEach((b) => b.classList.toggle('active', b === t)); paintTab(); return; }
+    if (t) {
+      tab = t.dataset.tab;
+      $$('[data-profile-tabs] [data-tab]', el).forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+      if (!t.classList.contains('tab')) $('[data-profile-tabs]', el)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      paintTab();
+      return;
+    }
     if (e.target.closest('[data-edit]')) { openEditProfile(); return; }
     const l = e.target.closest('[data-list]');
     if (l) { openFollowList(u, l.dataset.list); return; }
@@ -194,6 +225,11 @@ export async function render(el, ctx) {
     const f = $('[data-followers]', el);
     if (f) f.textContent = formatCount(u.followers);
   });
+  const offPin = bus.on('pin:change', ({ postId }) => {
+    if (!me) return;
+    u.pinnedPostId = postId;
+    if (tab === 'posts') paintTab();
+  });
   paintTab();
-  return () => { off(); list?.destroy(); };
+  return () => { off(); offPin(); list?.destroy(); };
 }

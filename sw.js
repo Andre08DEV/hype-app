@@ -3,7 +3,7 @@
  * copia en caché para poder abrirla sin conexión. Nunca cachea llamadas a
  * Supabase, Gemini ni GIPHY.
  */
-const CACHE = 'hype-shell-v1';
+const CACHE = 'hype-shell-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -22,8 +22,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // sólo archivos propios
   if (req.headers.get('range')) return; // vídeos por rangos: directo a la red
+  // Revalidamos siempre los módulos (petición condicional, 304 si no cambian) para no
+  // mezclar archivos de dos versiones después de una actualización.
+  const fresh = req.mode === 'navigate' ? req : new Request(req, { cache: 'no-cache' });
   event.respondWith(
-    fetch(req)
+    fetch(fresh)
       .then((res) => {
         if (res.ok && res.type === 'basic') {
           const copy = res.clone();

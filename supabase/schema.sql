@@ -126,7 +126,7 @@ create table if not exists public.posts (
   constraint posts_group_fk foreign key (group_id) references public.groups (id) on delete cascade,
   constraint posts_project_fk foreign key (project_id) references public.projects (id) on delete set null,
   constraint posts_thread_fk foreign key (thread_root_id) references public.posts (id) on delete cascade,
-  constraint posts_kind check (kind in ('post', 'short', 'game', 'project')),
+  constraint posts_kind check (kind in ('post', 'short', 'game', 'project', 'repost')),
   constraint posts_visibility check (visibility in ('public', 'followers')),
   constraint posts_body_len check (char_length(body) <= 4000),
   constraint posts_media_array check (jsonb_typeof(media) = 'array' and jsonb_array_length(media) <= 4),
@@ -138,6 +138,18 @@ create index if not exists posts_group_idx on public.posts (group_id, created_at
 create index if not exists posts_thread_idx on public.posts (thread_root_id, thread_index) where thread_root_id is not null;
 create index if not exists posts_tags_idx on public.posts using gin (tags);
 create index if not exists posts_kind_idx on public.posts (kind, created_at desc);
+
+-- v2: reposts y citas
+alter table public.posts add column if not exists repost_of uuid references public.posts (id) on delete cascade;
+alter table public.posts add column if not exists quote_of uuid references public.posts (id) on delete set null;
+alter table public.posts add column if not exists repost_count integer not null default 0;
+alter table public.posts drop constraint if exists posts_kind;
+alter table public.posts add constraint posts_kind check (kind in ('post', 'short', 'game', 'project', 'repost'));
+create unique index if not exists posts_repost_unique on public.posts (author_id, repost_of) where repost_of is not null;
+create index if not exists posts_repost_of_idx on public.posts (repost_of) where repost_of is not null;
+
+-- v2: post fijado en el perfil
+alter table public.profiles add column if not exists pinned_post_id uuid references public.posts (id) on delete set null;
 
 create table if not exists public.hypes (
   user_id uuid not null references public.profiles (id) on delete cascade,
@@ -221,8 +233,10 @@ create table if not exists public.notifications (
   created_at timestamptz not null default now(),
   constraint notifications_user_fk foreign key (user_id) references public.profiles (id) on delete cascade,
   constraint notifications_actor_fk foreign key (actor_id) references public.profiles (id) on delete cascade,
-  constraint notifications_type check (type in ('hype', 'comment', 'follow', 'mention', 'project_hype', 'project_comment', 'group_request', 'group_joined', 'system'))
+  constraint notifications_type check (type in ('hype', 'comment', 'follow', 'mention', 'project_hype', 'project_comment', 'group_request', 'group_joined', 'system', 'repost', 'quote'))
 );
+alter table public.notifications drop constraint if exists notifications_type;
+alter table public.notifications add constraint notifications_type check (type in ('hype', 'comment', 'follow', 'mention', 'project_hype', 'project_comment', 'group_request', 'group_joined', 'system', 'repost', 'quote'));
 create index if not exists notifications_user_idx on public.notifications (user_id, created_at desc);
 
 create table if not exists public.game_scores (
@@ -259,8 +273,14 @@ create table if not exists public.messages (
   body text not null,
   created_at timestamptz not null default now(),
   constraint messages_sender_fk foreign key (sender_id) references public.profiles (id) on delete cascade,
-  constraint messages_body_len check (char_length(body) between 1 and 4000)
+  constraint messages_body_len check (char_length(body) <= 4000)
 );
+alter table public.messages add column if not exists media jsonb;
+alter table public.messages alter column body set default '';
+alter table public.messages drop constraint if exists messages_body_len;
+alter table public.messages add constraint messages_body_len check (char_length(body) <= 4000);
+alter table public.messages drop constraint if exists messages_content;
+alter table public.messages add constraint messages_content check (char_length(body) > 0 or media is not null);
 create index if not exists messages_conv_idx on public.messages (conversation_id, created_at);
 
 -- Llamadas 1 a 1 (el audio/vídeo va por WebRTC; esta tabla solo avisa y guarda el estado).
@@ -282,6 +302,30 @@ create table if not exists public.calls (
 );
 create index if not exists calls_callee_idx on public.calls (callee_id, created_at desc);
 create index if not exists calls_caller_idx on public.calls (caller_id, created_at desc);
+
+-- Historias de 24 horas (foto, vídeo o texto sobre fondo de color).
+create table if not exists public.stories (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null default auth.uid(),
+  media jsonb,
+  caption text not null default '',
+  bg text[],
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '24 hours',
+  constraint stories_author_fk foreign key (author_id) references public.profiles (id) on delete cascade,
+  constraint stories_caption_len check (char_length(caption) <= 300),
+  constraint stories_content check (media is not null or char_length(caption) > 0)
+);
+create index if not exists stories_author_idx on public.stories (author_id, created_at desc);
+create index if not exists stories_expires_idx on public.stories (expires_at);
+
+create table if not exists public.story_views (
+  story_id uuid not null references public.stories (id) on delete cascade,
+  viewer_id uuid not null default auth.uid(),
+  created_at timestamptz not null default now(),
+  primary key (story_id, viewer_id),
+  constraint story_views_viewer_fk foreign key (viewer_id) references public.profiles (id) on delete cascade
+);
 
 -- Registro de uso de Hype IA (lo escribe la Edge Function con la service role).
 create table if not exists public.ai_requests (
@@ -444,7 +488,22 @@ declare
 begin
   new.hype_count := 0;
   new.comment_count := 0;
+  new.repost_count := 0;
   new.poll_voters := 0;
+  if new.kind = 'repost' then
+    if new.repost_of is null then raise exception 'Falta el post a repostear'; end if;
+    if exists (select 1 from public.posts where id = new.repost_of and kind = 'repost') then
+      raise exception 'No se puede repostear un repost';
+    end if;
+    new.body := '';
+    new.media := '[]'::jsonb;
+    new.poll := null;
+    new.thread_root_id := null;
+    new.thread_index := 0;
+    new.thread_count := 1;
+  elsif new.repost_of is not null then
+    new.repost_of := null;
+  end if;
   new.created_at := now();
   new.edited_at := null;
   new.tags := coalesce((
@@ -522,8 +581,23 @@ revoke execute on function public.notify_mentions(text, uuid, uuid, uuid, uuid) 
 
 create or replace function public.tg_posts_after()
 returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_target_author uuid;
 begin
   if tg_op = 'INSERT' then
+    if new.kind = 'repost' then
+      update public.posts set repost_count = repost_count + 1 where id = new.repost_of returning author_id into v_target_author;
+      if v_target_author is not null and v_target_author <> new.author_id then
+        insert into public.notifications (user_id, actor_id, type, post_id) values (v_target_author, new.author_id, 'repost', new.repost_of);
+      end if;
+      return new;
+    end if;
+    if new.quote_of is not null then
+      select author_id into v_target_author from public.posts where id = new.quote_of;
+      if v_target_author is not null and v_target_author <> new.author_id then
+        insert into public.notifications (user_id, actor_id, type, post_id) values (v_target_author, new.author_id, 'quote', new.id);
+      end if;
+    end if;
     if new.thread_index = 0 then
       update public.profiles set posts_count = posts_count + 1 where id = new.author_id;
       if new.group_id is not null then
@@ -532,6 +606,10 @@ begin
     end if;
     perform public.notify_mentions(new.body, new.author_id, coalesce(new.thread_root_id, new.id), null, null);
     return new;
+  end if;
+  if old.kind = 'repost' then
+    update public.posts set repost_count = greatest(repost_count - 1, 0) where id = old.repost_of;
+    return old;
   end if;
   if old.thread_index = 0 then
     update public.profiles set posts_count = greatest(posts_count - 1, 0) where id = old.author_id;
@@ -714,7 +792,10 @@ create trigger projects_before_insert before insert on public.projects for each 
 create or replace function public.tg_messages_after()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  update public.conversations set last_message = left(new.body, 140), last_message_at = new.created_at where id = new.conversation_id;
+  update public.conversations
+    set last_message = coalesce(nullif(left(new.body, 140), ''), case new.media->>'type' when 'audio' then '🎤 Nota de voz' when 'image' then '📷 Foto' when 'gif' then 'GIF' else '' end),
+        last_message_at = new.created_at
+    where id = new.conversation_id;
   update public.conversation_members set last_read_at = new.created_at where conversation_id = new.conversation_id and user_id = new.sender_id;
   return new;
 end $$;
@@ -735,11 +816,37 @@ end $$;
 drop trigger if exists calls_before_insert on public.calls;
 create trigger calls_before_insert before insert on public.calls for each row execute function public.tg_calls_before_insert();
 
+create or replace function public.tg_stories_before_insert()
+returns trigger language plpgsql as $$
+begin
+  new.created_at := now();
+  new.expires_at := now() + interval '24 hours';
+  return new;
+end $$;
+
+drop trigger if exists stories_before_insert on public.stories;
+create trigger stories_before_insert before insert on public.stories for each row execute function public.tg_stories_before_insert();
+
+-- Solo puedes fijar un post tuyo
+create or replace function public.tg_profiles_pinned_check()
+returns trigger language plpgsql as $$
+begin
+  if new.pinned_post_id is not null and new.pinned_post_id is distinct from old.pinned_post_id
+     and not exists (select 1 from public.posts p where p.id = new.pinned_post_id and p.author_id = new.id and p.kind <> 'repost') then
+    raise exception 'Solo puedes fijar uno de tus posts';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists profiles_pinned_check on public.profiles;
+create trigger profiles_pinned_check before update on public.profiles for each row execute function public.tg_profiles_pinned_check();
+
 -- ---------------------------------------------------------------------
 -- 5. RPCs (funciones que llama la app)
 -- ---------------------------------------------------------------------
 
 -- Publica un post o un hilo completo en una sola transacción.
+drop function if exists public.create_post(jsonb, text, text, uuid, boolean, uuid, jsonb);
 create or replace function public.create_post(
   p_parts jsonb,
   p_kind text default 'post',
@@ -747,7 +854,8 @@ create or replace function public.create_post(
   p_group_id uuid default null,
   p_sensitive boolean default false,
   p_project_id uuid default null,
-  p_game jsonb default null
+  p_game jsonb default null,
+  p_quote_of uuid default null
 ) returns uuid
 language plpgsql security invoker set search_path = public as $$
 declare
@@ -759,7 +867,7 @@ begin
   if auth.uid() is null then raise exception 'Inicia sesión para publicar'; end if;
   if v_n < 1 or v_n > 25 then raise exception 'Un hilo admite entre 1 y 25 posts'; end if;
   for v_part in select value from jsonb_array_elements(p_parts) loop
-    insert into public.posts (id, author_id, kind, body, media, poll, group_id, project_id, game, thread_root_id, thread_index, thread_count, visibility, sensitive)
+    insert into public.posts (id, author_id, kind, body, media, poll, group_id, project_id, game, thread_root_id, thread_index, thread_count, visibility, sensitive, quote_of)
     values (
       case when v_i = 0 then v_root else gen_random_uuid() end,
       auth.uid(),
@@ -774,7 +882,8 @@ begin
       v_i,
       case when v_i = 0 then v_n else 1 end,
       p_visibility,
-      p_sensitive
+      p_sensitive,
+      case when v_i = 0 then p_quote_of end
     );
     v_i := v_i + 1;
   end loop;
@@ -908,7 +1017,7 @@ create policy profiles_select on public.profiles for select using (true);
 drop policy if exists profiles_update on public.profiles;
 create policy profiles_update on public.profiles for update using (id = auth.uid()) with check (id = auth.uid());
 revoke insert, update on public.profiles from anon, authenticated;
-grant update (username, display_name, bio, avatar_url, avatar_emoji, banner_url, links, interests, dm_policy, onboarded) on public.profiles to authenticated;
+grant update (username, display_name, bio, avatar_url, avatar_emoji, banner_url, links, interests, dm_policy, onboarded, pinned_post_id) on public.profiles to authenticated;
 
 -- Grupos
 drop policy if exists groups_select on public.groups;
@@ -1078,6 +1187,27 @@ create policy calls_update on public.calls for update to authenticated
 revoke update, delete on public.calls from anon, authenticated;
 grant update (status, answered_at, ended_at) on public.calls to authenticated;
 
+-- Historias: públicas mientras no caduquen (el autor ve también las suyas caducadas).
+alter table public.stories enable row level security;
+alter table public.story_views enable row level security;
+drop policy if exists stories_select on public.stories;
+create policy stories_select on public.stories for select using (expires_at > now() or author_id = auth.uid());
+drop policy if exists stories_insert on public.stories;
+create policy stories_insert on public.stories for insert to authenticated with check (author_id = auth.uid());
+drop policy if exists stories_delete on public.stories;
+create policy stories_delete on public.stories for delete to authenticated using (author_id = auth.uid());
+revoke update on public.stories from anon, authenticated;
+-- Vistas: cada quien registra las suyas; el autor ve quién vio sus historias.
+drop policy if exists story_views_select on public.story_views;
+create policy story_views_select on public.story_views for select to authenticated using (
+  viewer_id = auth.uid() or exists (select 1 from public.stories s where s.id = story_id and s.author_id = auth.uid())
+);
+drop policy if exists story_views_insert on public.story_views;
+create policy story_views_insert on public.story_views for insert to authenticated with check (
+  viewer_id = auth.uid() and exists (select 1 from public.stories s where s.id = story_id and s.expires_at > now())
+);
+revoke update, delete on public.story_views from anon, authenticated;
+
 -- ai_requests: sin políticas → solo la service role (Edge Function) puede leer/escribir.
 revoke all on public.ai_requests from anon, authenticated;
 
@@ -1101,6 +1231,20 @@ create policy "hype media update" on storage.objects for update to authenticated
 drop policy if exists "hype media delete" on storage.objects;
 create policy "hype media delete" on storage.objects for delete to authenticated
   using (bucket_id = 'media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Bucket PRIVADO "dm-media" para notas de voz y fotos de mensajes.
+-- Ruta: <conversation_id>/<archivo>; solo los miembros de la conversación pueden subir y leer.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('dm-media', 'dm-media', false, 26214400, array['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/aac', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+on conflict (id) do update
+  set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "hype dm read" on storage.objects;
+create policy "hype dm read" on storage.objects for select to authenticated
+  using (bucket_id = 'dm-media' and public.is_conversation_member(((storage.foldername(name))[1])::uuid));
+drop policy if exists "hype dm insert" on storage.objects;
+create policy "hype dm insert" on storage.objects for insert to authenticated
+  with check (bucket_id = 'dm-media' and public.is_conversation_member(((storage.foldername(name))[1])::uuid));
 
 -- ---------------------------------------------------------------------
 -- 8. REALTIME (posts nuevos, contadores en vivo, notificaciones y mensajes)

@@ -12,6 +12,8 @@
 drop trigger if exists on_auth_user_created on auth.users;
 
 drop table if exists
+  public.story_views,
+  public.stories,
   public.calls,
   public.ai_requests,
   public.messages,
@@ -51,6 +53,7 @@ drop function if exists
   public.is_conversation_member(uuid),
   public.notify_mentions(text, uuid, uuid, uuid, uuid),
   public.create_post(jsonb, text, text, uuid, boolean, uuid, jsonb),
+  public.create_post(jsonb, text, text, uuid, boolean, uuid, jsonb, uuid),
   public.vote_poll(uuid, int[]),
   public.get_or_create_dm(uuid),
   public.my_conversations(),
@@ -69,5 +72,7 @@ drop function if exists
   public.tg_group_members(),
   public.tg_projects_before_insert(),
   public.tg_messages_after(),
-  public.tg_calls_before_insert()
+  public.tg_calls_before_insert(),
+  public.tg_stories_before_insert(),
+  public.tg_profiles_pinned_check()
 cascade;

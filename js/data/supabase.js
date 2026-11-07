@@ -6,7 +6,18 @@ import { uuid, excerpt, slugify } from '../core/utils.js';
 export const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/+esm';
 
 const PROFILE_COLS = 'id,username,display_name,avatar_url,avatar_emoji,verified';
-const POST_SELECT = `*,author:profiles!posts_author_fk(${PROFILE_COLS}),grp:groups!posts_group_fk(id,slug,name,emoji,color,is_private),project:projects!posts_project_fk(id,name,tagline,emoji,color,cover_url,hype_count,stage)`;
+const POST_BASE = `*,author:profiles!posts_author_fk(${PROFILE_COLS}),grp:groups!posts_group_fk(id,slug,name,emoji,color,is_private),project:projects!posts_project_fk(id,name,tagline,emoji,color,cover_url,hype_count,stage)`;
+// Los posts reposteados/citados se cargan aparte (_attachRefs): así no dependemos de
+// los auto-joins de PostgREST y la app sigue funcionando con el esquema v1.
+const POST_SELECT = POST_BASE;
+
+// Errores de un proyecto que todavía tiene el esquema v1 (sin historias, reposts, etc.).
+const V2_SCHEMA_HINT = /stories|story_views|repost_of|quote_of|repost_count|pinned_post_id|p_quote_of|'media' column of 'messages'|messages\.media|dm-media/i;
+const v2SchemaError = () => {
+  const e = new Error('Esta función es nueva: vuelve a ejecutar supabase/schema.sql en tu proyecto de Supabase (es seguro, no borra datos).');
+  e.code = 'SCHEMA_V2';
+  return e;
+};
 const PROJECT_SELECT = `*,owner:profiles!projects_owner_fk(${PROFILE_COLS})`;
 const GROUP_SELECT = `*,owner:profiles!groups_owner_fk(${PROFILE_COLS})`;
 const D = 24 * 3600e3;
@@ -83,6 +94,7 @@ export class SupabaseBackend {
 
   _err(error) {
     if (!error) return new Error('Error desconocido');
+    if (this._isSchemaError(error) && V2_SCHEMA_HINT.test(`${error.message || ''} ${error.details || ''} ${error.hint || ''}`)) return v2SchemaError();
     if (this._isSchemaError(error)) {
       this.schemaReady = false;
       const e = new Error('La base de datos no está configurada: ejecuta supabase/schema.sql en tu proyecto de Supabase.');
@@ -131,12 +143,12 @@ export class SupabaseBackend {
     if (!r) return null;
     return {
       ...this._profileLite(r), bio: r.bio || '', bannerUrl: r.banner_url || '', links: r.links || [], interests: r.interests || [],
-      dmPolicy: r.dm_policy || 'everyone', onboarded: !!r.onboarded, createdAt: r.created_at,
+      dmPolicy: r.dm_policy || 'everyone', onboarded: !!r.onboarded, createdAt: r.created_at, pinnedPostId: r.pinned_post_id || null,
       followers: r.followers_count || 0, following: r.following_count || 0, postsCount: r.posts_count || 0, hypeReceived: r.hype_received || 0,
     };
   }
 
-  _post(r, v = {}) {
+  _post(r, v = {}, depth = 0) {
     if (!r) return null;
     const poll = r.poll ? {
       options: r.poll.options || [], multiple: !!r.poll.multiple, closesAt: r.poll.closes_at,
@@ -153,26 +165,60 @@ export class SupabaseBackend {
       visibility: r.visibility, sensitive: r.sensitive, tags: r.tags || [], hypeCount: r.hype_count || 0, commentCount: r.comment_count || 0,
       hyped: v.hyped?.has(r.id) || false, bookmarked: v.bm?.has(r.id) || false, folderId: v.bm?.get(r.id) || null,
       createdAt: r.created_at, editedAt: r.edited_at,
+      repostOf: r.repost_of || null, quoteOf: r.quote_of || null, repostCount: r.repost_count || 0, reposted: v.reposted?.has(r.id) || false,
+      original: r.kind === 'repost' && depth === 0 && r.original ? this._post(r.original, v, 1) : null,
+      quoted: r.quoted ? { id: r.quoted.id, kind: r.quoted.kind, body: r.quoted.body || '', media: (r.quoted.media || []).slice(0, 1), createdAt: r.quoted.created_at, author: this._profileLite(r.quoted.author) } : null,
     };
   }
 
   async _viewerState(rows) {
-    const ids = rows.map((r) => r.id);
-    const v = { hyped: new Set(), bm: new Map(), votes: new Map() };
+    const all = rows.flatMap((r) => (r.original ? [r, r.original] : [r]));
+    const ids = [...new Set(all.map((r) => r.id))];
+    const v = { hyped: new Set(), bm: new Map(), votes: new Map(), reposted: new Set() };
     if (!this.uid || !ids.length) return v;
-    const pollIds = rows.filter((r) => r.poll).map((r) => r.id);
-    const [h, b, p] = await Promise.all([
+    const pollIds = all.filter((r) => r.poll).map((r) => r.id);
+    const [h, b, p, rp] = await Promise.all([
       this.sb.from('hypes').select('post_id').eq('user_id', this.uid).in('post_id', ids),
       this.sb.from('bookmarks').select('post_id,folder_id').eq('user_id', this.uid).in('post_id', ids),
       pollIds.length ? this.sb.from('poll_votes').select('post_id,option_index').eq('user_id', this.uid).in('post_id', pollIds) : Promise.resolve({ data: [] }),
+      this._noReposts ? Promise.resolve({ data: [] }) : this.sb.from('posts').select('repost_of').eq('author_id', this.uid).eq('kind', 'repost').in('repost_of', ids),
     ]);
+    if (rp.error && this._isSchemaError(rp.error)) this._noReposts = true; // esquema v1: no volver a preguntar
+    (rp.data || []).forEach((x) => v.reposted.add(x.repost_of));
     (h.data || []).forEach((x) => v.hyped.add(x.post_id));
     (b.data || []).forEach((x) => v.bm.set(x.post_id, x.folder_id));
     (p.data || []).forEach((x) => { if (!v.votes.has(x.post_id)) v.votes.set(x.post_id, []); v.votes.get(x.post_id).push(x.option_index); });
     return v;
   }
 
+  /** Posts por id (los que RLS no deja ver simplemente no vuelven). */
+  async _postsByIds(ids) {
+    const out = new Map();
+    if (!ids.length) return out;
+    const { data, error } = await this.sb.from('posts').select(POST_BASE).in('id', ids);
+    if (error) { console.warn('[hype] posts relacionados', error.message); return out; }
+    (data || []).forEach((r) => out.set(r.id, r));
+    return out;
+  }
+
+  /** Añade r.original (reposts) y r.quoted (citas) con una o dos consultas extra. */
+  async _attachRefs(rows) {
+    const want = new Set();
+    rows.forEach((r) => { if (r.kind === 'repost' && r.repost_of) want.add(r.repost_of); if (r.quote_of) want.add(r.quote_of); });
+    if (!want.size) return;
+    const found = await this._postsByIds([...want]);
+    const more = new Set();
+    rows.forEach((r) => { const o = r.kind === 'repost' ? found.get(r.repost_of) : null; if (o?.quote_of && !found.has(o.quote_of)) more.add(o.quote_of); });
+    if (more.size) (await this._postsByIds([...more])).forEach((row, id) => found.set(id, row));
+    const withQuote = (r) => { if (r.quote_of) r.quoted = found.get(r.quote_of) || null; return r; };
+    rows.forEach((r) => {
+      if (r.kind === 'repost') r.original = found.has(r.repost_of) ? withQuote({ ...found.get(r.repost_of) }) : null;
+      withQuote(r);
+    });
+  }
+
   async _posts(rows) {
+    await this._attachRefs(rows);
     const v = await this._viewerState(rows);
     return rows.map((r) => this._post(r, v));
   }
@@ -205,7 +251,7 @@ export class SupabaseBackend {
     };
   }
 
-  _message(r) { return { id: r.id, conversationId: r.conversation_id, senderId: r.sender_id, body: r.body, createdAt: r.created_at }; }
+  _message(r) { return { id: r.id, conversationId: r.conversation_id, senderId: r.sender_id, body: r.body || '', media: r.media || null, createdAt: r.created_at }; }
 
   // ---------------- realtime ----------------
   _subscribeRealtime() {
@@ -219,7 +265,7 @@ export class SupabaseBackend {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, ({ new: r }) => {
         if (!r) return;
         bus.emit('post:update', {
-          id: r.id, hypeCount: r.hype_count, commentCount: r.comment_count, body: r.body, editedAt: r.edited_at,
+          id: r.id, hypeCount: r.hype_count, commentCount: r.comment_count, repostCount: r.repost_count, body: r.body, editedAt: r.edited_at,
           ...(r.poll ? { poll: { counts: r.poll_counts, voters: r.poll_voters } } : {}),
         });
       })
@@ -331,7 +377,7 @@ export class SupabaseBackend {
     const row = {};
     if (patch.avatarFile) row.avatar_url = await this.uploadMedia(patch.avatarFile, { folder: 'avatars' });
     if (patch.bannerFile) row.banner_url = await this.uploadMedia(patch.bannerFile, { folder: 'banners' });
-    const map = { username: 'username', displayName: 'display_name', bio: 'bio', avatarUrl: 'avatar_url', avatarEmoji: 'avatar_emoji', bannerUrl: 'banner_url', links: 'links', interests: 'interests', dmPolicy: 'dm_policy', onboarded: 'onboarded' };
+    const map = { username: 'username', displayName: 'display_name', bio: 'bio', avatarUrl: 'avatar_url', avatarEmoji: 'avatar_emoji', bannerUrl: 'banner_url', links: 'links', interests: 'interests', dmPolicy: 'dm_policy', onboarded: 'onboarded', pinnedPostId: 'pinned_post_id' };
     for (const [k, col] of Object.entries(map)) if (patch[k] !== undefined) row[col] = k === 'username' ? String(patch[k]).toLowerCase() : patch[k];
     const data = await this._q(this.sb.from('profiles').update(row).eq('id', this.uid).select('*').single());
     this.profile = this._profile(data);
@@ -489,7 +535,8 @@ export class SupabaseBackend {
 
   async feed({ tab = 'foryou', offset = 0, limit = 10, ...filters } = {}) {
     const build = (orderHot) => {
-      let q = this.sb.from('posts').select(POST_SELECT).eq('thread_index', 0).neq('kind', 'short');
+      let q = this.sb.from('posts').select(POST_SELECT).eq('thread_index', 0);
+      q = tab === 'foryou' || tab === 'top' || filters.q || filters.tag ? q.not('kind', 'in', '(short,repost)') : q.neq('kind', 'short');
       q = this._applyFilters(q, filters);
       if (tab === 'recent' || tab === 'following' || !orderHot) q = q.order('created_at', { ascending: false });
       else if (tab === 'top') q = q.order('hype_count', { ascending: false }).order('created_at', { ascending: false });
@@ -530,13 +577,14 @@ export class SupabaseBackend {
     return this._posts(rows);
   }
 
-  async createPost({ parts, kind = 'post', visibility = 'public', groupId = null, sensitive = false, projectId = null, game = null }, { onProgress } = {}) {
+  async createPost({ parts, kind = 'post', visibility = 'public', groupId = null, sensitive = false, projectId = null, game = null, quoteOf = null }, { onProgress } = {}) {
     this._requireUser();
     const uploaded = await this._uploadParts(parts || [], onProgress);
     const prepared = uploaded.filter((p, i) => p.body || p.media.length || p.poll || (i === 0 && (game || projectId)));
     if (!prepared.length) throw new Error('El post está vacío');
     const rootId = await this._q(this.sb.rpc('create_post', {
       p_parts: prepared, p_kind: kind, p_visibility: visibility, p_group_id: groupId, p_sensitive: sensitive, p_project_id: projectId, p_game: game,
+      ...(quoteOf ? { p_quote_of: quoteOf } : {}),
     }));
     const post = await this.getPost(rootId);
     return post;
@@ -855,7 +903,7 @@ export class SupabaseBackend {
     if (type === 'hype') q = q.in('type', ['hype', 'project_hype']);
     const rows = await this._q(q);
     const prefs = state.settings.notify || {};
-    const kindOf = (t) => (t.startsWith('project') ? 'project' : t.startsWith('group') ? 'group' : t);
+    const kindOf = (t) => (t.startsWith('project') ? 'project' : t.startsWith('group') ? 'group' : t === 'quote' ? 'repost' : t);
     const items = rows.slice(0, limit).map((r) => this._notification(r)).filter((n) => prefs[kindOf(n.type)] !== false);
     return { items, hasMore: rows.length > limit };
   }
@@ -904,18 +952,145 @@ export class SupabaseBackend {
     return rows.reverse().map((r) => this._message(r));
   }
 
-  async sendMessage(conversationId, body) {
+  async sendMessage(conversationId, body, media = null) {
     const uid = this._requireUser();
     const text = String(body || '').trim().slice(0, 4000);
-    if (!text) throw new Error('Mensaje vacío');
-    const row = await this._q(this.sb.from('messages').insert({ conversation_id: conversationId, sender_id: uid, body: text }).select('*').single());
+    if (!text && !media) throw new Error('Mensaje vacío');
+    const row = await this._q(this.sb.from('messages').insert({ conversation_id: conversationId, sender_id: uid, body: text, ...(media ? { media } : {}) }).select('*').single());
     return this._message(row);
+  }
+
+  /** Sube una nota de voz o foto al bucket PRIVADO dm-media (<conversation_id>/<archivo>). */
+  async uploadDmMedia(conversationId, blob, { onProgress } = {}) {
+    const uid = this._requireUser();
+    const token = await this._token();
+    const type = (blob.type || 'application/octet-stream').split(';')[0];
+    const ext = ({ 'audio/webm': 'webm', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/aac': 'aac', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' })[type] || 'bin';
+    const path = `${conversationId}/${uid}-${Date.now()}-${uuid().slice(0, 6)}.${ext}`;
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${this.url}/storage/v1/object/dm-media/${path}`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.setRequestHeader('apikey', this.key);
+      xhr.setRequestHeader('x-upsert', 'false');
+      xhr.setRequestHeader('Content-Type', type);
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(); return; }
+        let msg = `Error ${xhr.status} al subir el archivo`;
+        try { const j = JSON.parse(xhr.responseText); msg = j.message || j.error || msg; } catch { /* texto */ }
+        if (/bucket not found/i.test(msg)) msg = 'Falta el bucket privado «dm-media»: vuelve a ejecutar supabase/schema.sql';
+        reject(new Error(msg));
+      };
+      xhr.onerror = () => reject(new Error('Error de red al subir el archivo'));
+      xhr.send(blob);
+    });
+    return { path };
+  }
+
+  /** Enlaces firmados (1 h) para adjuntos privados de mensajes. */
+  async resolveDmMedia(paths) {
+    this._signed ||= new Map();
+    const now = Date.now();
+    const out = {};
+    const missing = [];
+    for (const p of new Set(paths.filter(Boolean))) {
+      const hit = this._signed.get(p);
+      if (hit && hit.exp > now) out[p] = hit.url; else missing.push(p);
+    }
+    if (missing.length) {
+      const { data, error } = await this.sb.storage.from('dm-media').createSignedUrls(missing, 3600);
+      if (error) throw this._err(error);
+      (data || []).forEach((d) => { if (d.signedUrl) { out[d.path] = d.signedUrl; this._signed.set(d.path, { url: d.signedUrl, exp: now + 50 * 60e3 }); } });
+    }
+    return out;
   }
 
   async markConversationRead(conversationId) {
     if (!this.uid) return;
     await this.sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', this.uid);
     this._emitUnread();
+  }
+
+  // ---------------- reposts ----------------
+  async _repostCount(id) {
+    const r = await this._q(this.sb.from('posts').select('repost_count').eq('id', id).maybeSingle());
+    return r?.repost_count || 0;
+  }
+
+  async repost(postId) {
+    const uid = this._requireUser();
+    const { error } = await this.sb.from('posts').insert({ author_id: uid, kind: 'repost', repost_of: postId, body: '' });
+    if (error && error.code === '23514' && /posts_kind/.test(error.message || '')) throw v2SchemaError();
+    if (error && error.code !== '23505') throw this._err(error);
+    return { repostCount: await this._repostCount(postId), reposted: true };
+  }
+
+  async unrepost(postId) {
+    const uid = this._requireUser();
+    await this._q(this.sb.from('posts').delete().eq('author_id', uid).eq('kind', 'repost').eq('repost_of', postId));
+    return { repostCount: await this._repostCount(postId), reposted: false };
+  }
+
+  async pinPost(postId) { return this.updateProfile({ pinnedPostId: postId || null }); }
+
+  // ---------------- historias ----------------
+  _story(r, seen = false) {
+    return { id: r.id, authorId: r.author_id, author: this._profileLite(r.author), media: r.media || null, caption: r.caption || '', bg: r.bg || null, createdAt: r.created_at, expiresAt: r.expires_at, seen };
+  }
+
+  async storiesFeed() {
+    const rows = await this._q(this.sb.from('stories').select(`*,author:profiles!stories_author_fk(${PROFILE_COLS})`).gt('expires_at', new Date().toISOString()).order('created_at', { ascending: true }).limit(300));
+    const seen = new Set();
+    if (this.uid && rows.length) {
+      const views = await this._q(this.sb.from('story_views').select('story_id').eq('viewer_id', this.uid).in('story_id', rows.map((r) => r.id)));
+      views.forEach((x) => seen.add(x.story_id));
+    }
+    const following = new Set(await this._followingIds());
+    const groups = new Map();
+    for (const r of rows) {
+      if (!groups.has(r.author_id)) groups.set(r.author_id, { user: this._profileLite(r.author), isMe: r.author_id === this.uid, following: following.has(r.author_id), stories: [] });
+      groups.get(r.author_id).stories.push(this._story(r, r.author_id === this.uid || seen.has(r.id)));
+    }
+    const out = [...groups.values()].map((g) => ({ ...g, allSeen: g.stories.every((s) => s.seen) }));
+    out.sort((a, b) => (b.isMe - a.isMe) || (a.allSeen - b.allSeen) || (b.following - a.following) || b.stories.at(-1).createdAt.localeCompare(a.stories.at(-1).createdAt));
+    return out;
+  }
+
+  async createStory({ file = null, mediaType = 'image', caption = '', bg = null, filter = 'none', poster = null, width = 0, height = 0, duration = 0 }) {
+    const uid = this._requireUser();
+    const text = String(caption || '').trim().slice(0, 300);
+    let media = null;
+    if (file) {
+      const url = await this.uploadMedia(file, { folder: 'stories' });
+      const posterUrl = poster ? await this.uploadMedia(poster, { folder: 'stories' }) : '';
+      media = { type: mediaType, url, poster: posterUrl, filter, width, height, duration };
+    }
+    if (!media && !text) throw new Error('La historia está vacía');
+    const { data, error } = await this.sb.from('stories').insert({ author_id: uid, media, caption: text, bg: media ? null : (bg || ['#8b5cf6', '#ec4899']) }).select(`*,author:profiles!stories_author_fk(${PROFILE_COLS})`).single();
+    if (error) {
+      if (this._isSchemaError(error)) throw new Error('Las historias necesitan la tabla «stories»: vuelve a ejecutar supabase/schema.sql (no borra datos).');
+      throw this._err(error);
+    }
+    const story = this._story(data, true);
+    bus.emit('story:created', story);
+    return story;
+  }
+
+  async markStorySeen(id) {
+    if (!this.uid) return;
+    const { error } = await this.sb.from('story_views').insert({ story_id: id, viewer_id: this.uid });
+    if (error && error.code !== '23505') console.warn('[stories] vista', error.message);
+  }
+
+  async storyViewers(id) {
+    const rows = await this._q(this.sb.from('story_views').select(`created_at,viewer:profiles!story_views_viewer_fk(${PROFILE_COLS})`).eq('story_id', id).order('created_at', { ascending: false }).limit(200));
+    return rows.map((r) => this._profileLite(r.viewer));
+  }
+
+  async deleteStory(id) {
+    await this._q(this.sb.from('stories').delete().eq('id', id));
+    bus.emit('story:deleted', { id });
   }
 
   // ---------------- llamadas ----------------

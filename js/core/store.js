@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS = {
   dmPolicy: 'everyone',
   requireAltText: false,
 
-  notify: { hype: true, comment: true, follow: true, mention: true, group: true, project: true, message: true, browser: false, sound: false },
+  notify: { hype: true, comment: true, follow: true, mention: true, repost: true, group: true, project: true, message: true, browser: false, sound: false },
 
   ai: {
     enabled: true,
@@ -172,6 +172,8 @@ export function isFilteredOut(post) {
   if (!post) return true;
   if (s.hiddenPosts.includes(post.id)) return true;
   if (post.author && s.mutedUsers.includes(post.author.username)) return true;
+  // Un repost se filtra por quien lo comparte y por el post original.
+  if (post.kind === 'repost') return post.original ? isFilteredOut(post.original) : false;
   if (s.mutedWords.length) {
     const text = (post.body || '').toLowerCase();
     if (s.mutedWords.some((w) => w && text.includes(String(w).toLowerCase()))) return true;
