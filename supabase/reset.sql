@@ -12,6 +12,7 @@
 drop trigger if exists on_auth_user_created on auth.users;
 
 drop table if exists
+  public.calls,
   public.ai_requests,
   public.messages,
   public.conversation_members,
@@ -67,5 +68,6 @@ drop function if exists
   public.tg_groups_after_insert(),
   public.tg_group_members(),
   public.tg_projects_before_insert(),
-  public.tg_messages_after()
+  public.tg_messages_after(),
+  public.tg_calls_before_insert()
 cascade;

@@ -19,6 +19,7 @@ const SECTIONS = [
   { id: 'contenido', label: 'Feed y filtros', icon: 'filter' },
   { id: 'privacidad', label: 'Privacidad', icon: 'shield' },
   { id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
+  { id: 'llamadas', label: 'Llamadas', icon: 'video' },
   { id: 'ia', label: 'Hype IA', icon: 'sparkles' },
   { id: 'nube', label: 'Nube (Supabase)', icon: 'cloud' },
   { id: 'integraciones', label: 'Integraciones', icon: 'layers' },
@@ -99,6 +100,23 @@ function secNotificaciones() {
       ${toggle('notify.sound', 'Sonido al recibir avisos')}`)}`;
 }
 
+function secLlamadas() {
+  return html`<h2>Llamadas y videollamadas</h2>
+    ${group('Recibir', html`${toggle('calls.allowIncoming', 'Recibir llamadas', 'Si lo desactivas, las llamadas entrantes se rechazan automáticamente.')}
+      ${toggle('calls.ringtone', 'Tono de llamada', 'Suena al recibir una llamada y mientras llamas.')}`)}
+    ${group('Al entrar en una llamada', html`${toggle('calls.startMuted', 'Empezar con el micrófono silenciado')}${toggle('calls.startCameraOff', 'Empezar con la cámara apagada')}`)}
+    ${group('Probar', html`<div class="set-block">
+      <div class="cam-test" data-cam-test><span class="small" style="opacity:.75">Vista previa apagada</span></div>
+      <div class="mic-meter" title="Nivel del micrófono"><i data-mic-level></i></div>
+      <div class="row-wrap"><button type="button" class="btn btn-secondary btn-sm" data-cam-start>${icon('video', { size: 16 })} Probar cámara y micrófono</button>
+        ${api.mode === 'local' ? html`<button type="button" class="btn btn-ghost btn-sm" data-sim-call>${icon('phone', { size: 16 })} Simular una llamada entrante</button>` : ''}</div>
+    </div>`)}
+    ${group('Cómo funcionan', html`<div class="set-block small muted" style="line-height:1.7">
+      Las llamadas son 1 a 1 y se inician desde un chat (iconos 📞 y 📹) o desde el perfil de alguien. El audio y el vídeo viajan directamente entre los dos navegadores con WebRTC, cifrados de extremo a extremo; Supabase Realtime solo sirve para conectarlos.<br>
+      ${api.mode === 'local' ? 'En modo demo puedes llamar a los usuarios de ejemplo para probar la interfaz.' : 'En redes muy restrictivas (algunas empresas o datos móviles) puede hacer falta un servidor TURN: se añade en config.js (iceServers).'}
+    </div>`)}`;
+}
+
 function secIA() {
   const s = state.settings.ai;
   const models = AI_MODELS.some((m) => m.id === (s.model || 'gemini-3.8-flash')) ? AI_MODELS : [...AI_MODELS, { id: s.model, name: s.model, note: '' }];
@@ -177,7 +195,7 @@ function secAvanzado() {
     ${group('Acerca de', html`<div class="set-row"><img src="assets/icon.svg" alt="" width="40" height="40" style="border-radius:12px"><span class="meta"><b>Hype ${APP_VERSION}</b><span>Red social para creadores · ${api.mode === 'cloud' ? 'Supabase' : 'demo local'} · Gemini</span></span></div>`)}`;
 }
 
-const RENDER = { cuenta: secCuenta, apariencia: secApariencia, contenido: secContenido, privacidad: secPrivacidad, notificaciones: secNotificaciones, ia: secIA, nube: secNube, integraciones: secIntegraciones, accesibilidad: secAccesibilidad, datos: secDatos, atajos: showShortcutsInline, avanzado: secAvanzado };
+const RENDER = { cuenta: secCuenta, apariencia: secApariencia, contenido: secContenido, privacidad: secPrivacidad, notificaciones: secNotificaciones, llamadas: secLlamadas, ia: secIA, nube: secNube, integraciones: secIntegraciones, accesibilidad: secAccesibilidad, datos: secDatos, atajos: showShortcutsInline, avanzado: secAvanzado };
 
 export function render(el, ctx) {
   let section = RENDER[ctx.params.section] ? ctx.params.section : (state.user ? 'cuenta' : 'apariencia');
@@ -185,7 +203,48 @@ export function render(el, ctx) {
     <div class="settings-layout"><nav class="settings-nav" aria-label="Secciones de ajustes">${SECTIONS.map((s) => html`<a href="#/ajustes/${s.id}" class="${s.id === section ? 'active' : ''}" data-sec="${s.id}">${icon(s.icon, { size: 18 })} ${s.label}</a>`)}</nav><div class="settings-body" data-body></div></div>`);
   const body = $('[data-body]', el);
 
+  let camTest = null;
+  const stopCamTest = () => {
+    if (!camTest) return;
+    cancelAnimationFrame(camTest.raf);
+    camTest.stream.getTracks().forEach((t) => t.stop());
+    camTest.ctx?.close().catch(() => {});
+    camTest = null;
+  };
+  const startCamTest = async (btn) => {
+    if (camTest) { stopCamTest(); paint(); return; }
+    const { openMedia } = await import('../calls/core.js');
+    const res = await openMedia({ video: true, audio: true });
+    if (!res.hasVideo && !res.hasAudio) { toast(res.error || 'No se pudo acceder a la cámara ni al micrófono', { type: 'error' }); return; }
+    camTest = { stream: res.stream, raf: 0, ctx: null };
+    const box = $('[data-cam-test]', body);
+    if (res.hasVideo) { box.innerHTML = '<video autoplay playsinline muted></video>'; box.querySelector('video').srcObject = res.stream; }
+    else box.innerHTML = '<span class="small">🎙️ Sin cámara: solo micrófono</span>';
+    if (res.error) toast(res.error);
+    if (res.hasAudio) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        ctx.createMediaStreamSource(res.stream).connect(analyser);
+        const data = new Uint8Array(analyser.fftSize);
+        const bar = $('[data-mic-level]', body);
+        const tick = () => {
+          analyser.getByteTimeDomainData(data);
+          let peak = 0;
+          for (const v of data) peak = Math.max(peak, Math.abs(v - 128));
+          if (bar) bar.style.width = Math.min(100, (peak / 128) * 160) + '%';
+          if (camTest) camTest.raf = requestAnimationFrame(tick);
+        };
+        camTest.ctx = ctx;
+        tick();
+      } catch { /* sin medidor */ }
+    }
+    btn.innerHTML = String(html`${icon('stop', { size: 16 })} Detener prueba`);
+  };
+
   const paint = () => {
+    stopCamTest();
     body.innerHTML = String(RENDER[section]());
     afterPaint();
   };
@@ -261,6 +320,9 @@ export function render(el, ctx) {
       return;
     }
     if (t.closest('[data-ai-remove]')) { set('ai.apiKey', ''); paint(); toast('API key eliminada de este navegador'); return; }
+    const camBtn = t.closest('[data-cam-start]');
+    if (camBtn) { startCamTest(camBtn); return; }
+    if (t.closest('[data-sim-call]')) { toast('Recibirás una llamada de @hype en 2 segundos 📞'); setTimeout(() => api.simulateIncomingCall?.('video'), 2000); return; }
     if (t.closest('[data-giphy-save]')) { set('giphyKey', $('[data-giphy]', body).value.trim()); toast('Key de GIPHY guardada', { type: 'success' }); return; }
     const test = t.closest('[data-cloud-test]');
     if (test) {
@@ -379,4 +441,5 @@ export function render(el, ctx) {
   });
 
   paint();
+  return () => stopCamTest();
 }

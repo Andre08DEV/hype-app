@@ -11,6 +11,7 @@ import { initPostActions, postCache, toggleHype, openFolderPicker } from './comp
 import { avatar, coverBox, followBtn } from './components/common.js';
 import { openComposer, openCreateMenu } from './components/composer.js';
 import { describeNotification } from './components/notify.js';
+import { initCalls } from './calls/ui.js';
 
 const NAV = [
   { path: '/', label: 'Inicio', icon: 'home', name: 'feed' },
@@ -172,7 +173,7 @@ export function showShortcuts() {
 function onKey(e) {
   if (!state.settings.keyboardShortcuts || e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target;
-  if (t.closest?.('input, textarea, select, [contenteditable="true"]') || hasOpenModal()) return;
+  if (t.closest?.('input, textarea, select, [contenteditable="true"]') || hasOpenModal() || document.body.classList.contains('call-open')) return;
   if (document.body.dataset.route === 'shorts' || document.body.dataset.route === 'game') return;
   const k = e.key.toLowerCase();
   if (gPending) {
@@ -260,6 +261,7 @@ async function boot() {
   renderShell();
   observeMedia(document.body);
   initPostActions();
+  initCalls();
   registerRoutes();
 
   // Primera visita sin cuenta → bienvenida

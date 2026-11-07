@@ -27,4 +27,5 @@ window.HYPE_CONFIG = {
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGZjenJ0amd3cHN6ZHZrc3V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1MjgxNDYsImV4cCI6MjEwMzEwNDE0Nn0.CwfcwVVxq0rkvM6A_7j5wJDEP9HH8weIimsJGpC6iuk',
   giphyApiKey: 'OJbOJ6CVqu6KKSQ1MrcNFIO8NHXEkZ5s',       // pega aquí tu key de GIPHY (32 caracteres) entre las comillas
   aiModel: 'gemini-3.8-flash',
+  iceServers: [],        // opcional: servidor TURN para videollamadas en redes estrictas (ver README → Videollamadas)
 };

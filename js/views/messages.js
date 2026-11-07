@@ -51,7 +51,9 @@ function bubble(m, mine) {
 }
 
 async function renderChat(el, id) {
-  el.innerHTML = String(html`<div class="dm-layout"><div class="view-header"><button class="icon-btn" data-back aria-label="Volver">${icon('arrowLeft')}</button><span data-head class="row" style="gap:10px;min-width:0"><b>Chat</b></span></div>
+  el.innerHTML = String(html`<div class="dm-layout"><div class="view-header"><button class="icon-btn" data-back aria-label="Volver">${icon('arrowLeft')}</button><span data-head class="row" style="gap:10px;min-width:0"><b>Chat</b></span><span class="spacer"></span>
+      <button class="icon-btn" data-call="audio" title="Llamada de voz" aria-label="Llamada de voz">${icon('phone')}</button>
+      <button class="icon-btn" data-call="video" title="Videollamada" aria-label="Videollamada">${icon('video')}</button></div>
     <div class="dm-list" data-msgs><div class="spinner"></div></div>
     <form class="dm-input" data-form><textarea class="textarea" name="body" rows="1" maxlength="4000" placeholder="Escribe un mensaje…" aria-label="Mensaje"></textarea><button class="btn btn-primary" type="submit" aria-label="Enviar">${icon('send', { size: 18 })}</button></form></div>`);
   el.querySelector('[data-back]').onclick = () => back('/mensajes');
@@ -91,6 +93,10 @@ async function renderChat(el, id) {
     try { add(await api.sendMessage(id, text)); } catch (err) { toastError(err); ta.value = text; }
   });
   setTimeout(() => ta.focus(), 50);
+  el.querySelectorAll('[data-call]').forEach((b) => b.addEventListener('click', async () => {
+    const { startCall } = await import('../calls/ui.js');
+    startCall(conv.other, { conversationId: id, kind: b.dataset.call });
+  }));
 
   const offs = [
     bus.on('message', ({ conversationId, message }) => { if (conversationId === id) { add(message); api.markConversationRead(id).catch(() => {}); } }),

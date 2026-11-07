@@ -240,6 +240,17 @@ export class SupabaseBackend {
       })
       .subscribe();
     this._channels.push(mine);
+    // Llamadas en un canal aparte: si la tabla «calls» aún no existe, no afecta al resto.
+    const calls = this.sb.channel(`hype-calls-${this.uid}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${this.uid}` }, async ({ new: row }) => {
+        if (!row) return;
+        const other = await this.getProfileById(row.caller_id).catch(() => null);
+        bus.emit('call:incoming', { ...this._call(row), other });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls', filter: `callee_id=eq.${this.uid}` }, ({ new: row }) => { if (row) bus.emit('call:update', this._call(row)); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'calls', filter: `caller_id=eq.${this.uid}` }, ({ new: row }) => { if (row) bus.emit('call:update', this._call(row)); })
+      .subscribe();
+    this._channels.push(calls);
   }
 
   async _emitUnread() {
@@ -905,6 +916,48 @@ export class SupabaseBackend {
     if (!this.uid) return;
     await this.sb.from('conversation_members').update({ last_read_at: new Date().toISOString() }).eq('conversation_id', conversationId).eq('user_id', this.uid);
     this._emitUnread();
+  }
+
+  // ---------------- llamadas ----------------
+  _call(r) {
+    return { id: r.id, conversationId: r.conversation_id, callerId: r.caller_id, calleeId: r.callee_id, kind: r.kind, status: r.status, createdAt: r.created_at, answeredAt: r.answered_at, endedAt: r.ended_at, simulated: false };
+  }
+
+  async startCall({ conversationId, calleeId, kind = 'video' }) {
+    const uid = this._requireUser();
+    const { data, error } = await this.sb.from('calls').insert({ conversation_id: conversationId, caller_id: uid, callee_id: calleeId, kind }).select('*').single();
+    if (error) {
+      if (this._isSchemaError(error)) throw new Error('Las videollamadas necesitan la tabla «calls»: vuelve a ejecutar supabase/schema.sql en tu proyecto (es seguro, no borra datos).');
+      throw this._err(error);
+    }
+    return this._call(data);
+  }
+
+  async updateCall(id, { status }) {
+    const row = { status };
+    if (status === 'accepted') row.answered_at = new Date().toISOString();
+    if (['ended', 'declined', 'missed', 'canceled', 'busy'].includes(status)) row.ended_at = new Date().toISOString();
+    const { error } = await this.sb.from('calls').update(row).eq('id', id);
+    if (error) throw this._err(error);
+  }
+
+  /** Canal de señalización WebRTC (Realtime Broadcast) para una llamada. */
+  callSignal(callId) {
+    const ch = this.sb.channel(`hype-call-${callId}`, { config: { broadcast: { self: false, ack: false } } });
+    const fns = new Set();
+    const queue = [];
+    let ready = false;
+    ch.on('broadcast', { event: 'signal' }, ({ payload }) => fns.forEach((fn) => fn(payload)));
+    const send = (msg) => ch.send({ type: 'broadcast', event: 'signal', payload: msg }).catch?.(() => {});
+    ch.subscribe((status) => {
+      if (status === 'SUBSCRIBED') { ready = true; queue.splice(0).forEach(send); }
+      else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') bus.emit('call:signal-error', { callId, status });
+    });
+    return {
+      send: (msg) => { if (ready) send(msg); else queue.push(msg); },
+      onMessage: (fn) => { fns.add(fn); return () => fns.delete(fn); },
+      close: () => { this.sb.removeChannel(ch); },
+    };
   }
 
   // compatibilidad con la API local

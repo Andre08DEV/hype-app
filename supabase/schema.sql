@@ -263,6 +263,26 @@ create table if not exists public.messages (
 );
 create index if not exists messages_conv_idx on public.messages (conversation_id, created_at);
 
+-- Llamadas 1 a 1 (el audio/vídeo va por WebRTC; esta tabla solo avisa y guarda el estado).
+create table if not exists public.calls (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations (id) on delete cascade,
+  caller_id uuid not null default auth.uid(),
+  callee_id uuid not null,
+  kind text not null default 'video',
+  status text not null default 'ringing',
+  created_at timestamptz not null default now(),
+  answered_at timestamptz,
+  ended_at timestamptz,
+  constraint calls_caller_fk foreign key (caller_id) references public.profiles (id) on delete cascade,
+  constraint calls_callee_fk foreign key (callee_id) references public.profiles (id) on delete cascade,
+  constraint calls_kind check (kind in ('video', 'audio')),
+  constraint calls_status check (status in ('ringing', 'accepted', 'declined', 'missed', 'canceled', 'ended', 'busy')),
+  constraint calls_not_self check (caller_id <> callee_id)
+);
+create index if not exists calls_callee_idx on public.calls (callee_id, created_at desc);
+create index if not exists calls_caller_idx on public.calls (caller_id, created_at desc);
+
 -- Registro de uso de Hype IA (lo escribe la Edge Function con la service role).
 create table if not exists public.ai_requests (
   id bigint generated always as identity primary key,
@@ -702,6 +722,19 @@ end $$;
 drop trigger if exists messages_after on public.messages;
 create trigger messages_after after insert on public.messages for each row execute function public.tg_messages_after();
 
+create or replace function public.tg_calls_before_insert()
+returns trigger language plpgsql as $$
+begin
+  new.status := 'ringing';
+  new.created_at := now();
+  new.answered_at := null;
+  new.ended_at := null;
+  return new;
+end $$;
+
+drop trigger if exists calls_before_insert on public.calls;
+create trigger calls_before_insert before insert on public.calls for each row execute function public.tg_calls_before_insert();
+
 -- ---------------------------------------------------------------------
 -- 5. RPCs (funciones que llama la app)
 -- ---------------------------------------------------------------------
@@ -867,6 +900,7 @@ alter table public.conversations enable row level security;
 alter table public.conversation_members enable row level security;
 alter table public.messages enable row level security;
 alter table public.ai_requests enable row level security;
+alter table public.calls enable row level security;
 
 -- Perfiles
 drop policy if exists profiles_select on public.profiles;
@@ -1027,6 +1061,23 @@ drop policy if exists messages_insert on public.messages;
 create policy messages_insert on public.messages for insert to authenticated with check (sender_id = auth.uid() and public.is_conversation_member(conversation_id));
 revoke update on public.messages from anon, authenticated;
 
+-- Llamadas: solo las ven y actualizan sus dos participantes; solo se puede llamar
+-- a alguien con quien ya compartes una conversación (que respeta su dm_policy).
+drop policy if exists calls_select on public.calls;
+create policy calls_select on public.calls for select to authenticated using (caller_id = auth.uid() or callee_id = auth.uid());
+drop policy if exists calls_insert on public.calls;
+create policy calls_insert on public.calls for insert to authenticated with check (
+  caller_id = auth.uid()
+  and public.is_conversation_member(conversation_id)
+  and exists (select 1 from public.conversation_members m where m.conversation_id = calls.conversation_id and m.user_id = calls.callee_id)
+);
+drop policy if exists calls_update on public.calls;
+create policy calls_update on public.calls for update to authenticated
+  using (caller_id = auth.uid() or callee_id = auth.uid())
+  with check (caller_id = auth.uid() or callee_id = auth.uid());
+revoke update, delete on public.calls from anon, authenticated;
+grant update (status, answered_at, ended_at) on public.calls to authenticated;
+
 -- ai_requests: sin políticas → solo la service role (Edge Function) puede leer/escribir.
 revoke all on public.ai_requests from anon, authenticated;
 
@@ -1060,7 +1111,7 @@ declare
   t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['posts', 'notifications', 'messages'] loop
+    foreach t in array array['posts', 'notifications', 'messages', 'calls'] loop
       begin
         execute format('alter publication supabase_realtime add table public.%I', t);
       exception when duplicate_object then
