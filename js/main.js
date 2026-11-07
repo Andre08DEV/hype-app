@@ -173,7 +173,7 @@ export function showShortcuts() {
 function onKey(e) {
   if (!state.settings.keyboardShortcuts || e.ctrlKey || e.metaKey || e.altKey) return;
   const t = e.target;
-  if (t.closest?.('input, textarea, select, [contenteditable="true"]') || hasOpenModal() || document.body.classList.contains('call-open')) return;
+  if (t.closest?.('input, textarea, select, [contenteditable="true"]') || hasOpenModal() || document.body.classList.contains('call-open') || document.querySelector('.story-viewer')) return;
   if (document.body.dataset.route === 'shorts' || document.body.dataset.route === 'game') return;
   const k = e.key.toLowerCase();
   if (gPending) {
@@ -200,6 +200,9 @@ function onKey(e) {
 function onNotification(n) {
   const d = describeNotification(n);
   const prefs = state.settings.notify || {};
+  const t = String(n.type || '');
+  const kind = t.startsWith('project') ? 'project' : t.startsWith('group') ? 'group' : t === 'quote' ? 'repost' : t;
+  if (prefs[kind] === false) return;
   if (document.hidden && prefs.browser && 'Notification' in window && Notification.permission === 'granted') {
     try { new Notification('Hype', { body: `${d.emoji} ${d.text}`, icon: 'assets/icon.svg', tag: n.id }); } catch { /* ignore */ }
   } else if (document.body.dataset.route !== 'notifications') {

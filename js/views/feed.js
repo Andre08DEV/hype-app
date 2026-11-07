@@ -9,6 +9,7 @@ import { openComposer, openShortComposer } from '../components/composer.js';
 import { avatar } from '../components/common.js';
 import { emptyState } from '../core/ui.js';
 import { pickFiles } from '../core/utils.js';
+import { mountStoriesBar } from '../components/stories.js';
 
 const TABS = [
   { id: 'foryou', label: 'Para ti' },
@@ -51,6 +52,7 @@ export function render(el) {
         <button class="icon-btn" data-quick="short" title="Short" aria-label="Subir short">${icon('film')}</button>
       </div>
     </div>` : html`<div class="notice" style="margin:12px var(--pad)">${icon('sparkles')}<span>Estás explorando sin cuenta. <a href="#/bienvenida" class="bold" style="color:var(--accent-text)">Únete</a> para publicar, dar hype y guardar posts.</span></div>`}
+    <div data-stories></div>
     <div class="filter-bar">
       <div class="chips" data-kinds>${KINDS.map((k) => html`<button class="chip ${k.id === st.kind ? 'active' : ''}" data-kind="${k.id}">${k.label}</button>`)}</div>
       <button class="icon-btn sm" data-toggle-filters title="Más filtros" aria-label="Más filtros">${icon('sliders', { size: 18 })}</button>
@@ -66,6 +68,7 @@ export function render(el) {
 
   const listHost = $('[data-list]', el);
   let list = null;
+  const stories = mountStoriesBar($('[data-stories]', el));
 
   const paintMuted = () => {
     const s = state.settings;
@@ -132,6 +135,7 @@ export function render(el) {
     }),
     bus.on('post:new', (post) => {
       if (!post || post.authorId === state.user?.id || isFilteredOut(post) || post.kind === 'short') return;
+      if (post.kind === 'repost' && (st.tab === 'foryou' || st.tab === 'top' || st.kind !== 'all')) return;
       if (st.pending.some((p) => p.id === post.id)) return;
       st.pending.push(post);
       showPending();
@@ -140,5 +144,11 @@ export function render(el) {
   ];
 
   build();
-  return { destroy() { offs.forEach((o) => o()); list?.destroy(); } };
+  let hiddenAt = 0;
+  return {
+    destroy() { offs.forEach((o) => o()); list?.destroy(); stories.destroy(); },
+    onHide() { hiddenAt = Date.now(); },
+    // Al volver al inicio, refresca las historias (vistas o caducadas) si ha pasado un rato.
+    onShow() { if (Date.now() - hiddenAt > 15000) stories.reload(); },
+  };
 }

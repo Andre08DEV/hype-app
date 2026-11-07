@@ -104,3 +104,15 @@ export const POSTS = [
   { id: 'post-founders', author: 'u-diego', ago: 44 * H, hype: 22, group: 'g-founders', body: 'Métricas reales de este mes (solo para el grupo): MRR $4.2k, churn 3.1%, CAC $18. Pregunten lo que quieran 👇' },
   { id: 'post-sql', author: 'u-ana', ago: 52 * H, hype: 57, group: 'g-devs', body: 'Si usas **Supabase**, activa siempre RLS. Ejemplo de política para que cada quien vea solo sus marcadores:\n\n```sql\ncreate policy "solo mis marcadores"\non bookmarks for select\nusing (auth.uid() = user_id);\n```\n#supabase #seguridad' },
 ];
+
+/** Historias de demo (se regeneran en modo local para que siempre haya alguna activa). */
+export const DEMO_STORIES = [
+  { author: 'u-hype', caption: '¡Nuevo! Ya puedes subir historias de 24 h ✨ Toca «Tu historia» para crear la tuya', bg: ['#8b5cf6', '#ec4899'] },
+  { author: 'u-maria', media: { type: 'image', url: pic('story-pancakes', 720, 1280) }, caption: 'Desayuno de domingo 🥞 receta mañana en mi perfil' },
+  { author: 'u-sofia', caption: 'Hoy publiqué mi primer componente open source 🎉 ¡gracias por el hype!', bg: ['#6366f1', '#06b6d4'] },
+  { author: 'u-kai', media: { type: 'image', url: pic('story-setup', 720, 1280) }, caption: 'Mi setup para el devlog de esta semana 🎮' },
+  { author: 'u-valen', media: { type: 'image', url: pic('story-sunset', 720, 1280) }, caption: 'Paleta de hoy: atardecer 🌅' },
+  { author: 'u-leo', media: { type: 'video', ...mix(1170) }, caption: 'Beat nuevo en camino 🎧' },
+  { author: 'u-diego', caption: 'Día 13 construyendo en público: ¡1.000 usuarios! 🚀', bg: ['#f97316', '#ef4444'] },
+  { author: 'u-kai', media: { type: 'image', url: pic('story-arcade', 720, 1280) }, caption: '¿Alguien me supera en Esquiva Orbital? 🛸' },
+];

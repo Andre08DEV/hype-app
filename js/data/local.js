@@ -3,7 +3,7 @@
 import { bus, state, postKinds } from '../core/store.js';
 import { uuid, extractTags, extractMentions, normalize, pick, shuffle, excerpt, slugify, sleep } from '../core/utils.js';
 import { putBlob, clearBlobs } from './media-store.js';
-import { BOTS, POSTS, GROUPS, PROJECTS, SHORT_VIDEOS } from './seed.js';
+import { BOTS, POSTS, GROUPS, PROJECTS, SHORT_VIDEOS, DEMO_STORIES } from './seed.js';
 
 const DB_KEY = 'hype:db:v1';
 const H = 3600e3, D = 24 * H;
@@ -145,8 +145,19 @@ export class LocalBackend {
   async init() {
     try { this.db = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch { this.db = null; }
     if (!this.db || this.db.version !== 1) { this.db = seedDb(); this._persist(true); }
+    this._migrate();
     this._startAmbient();
     return this.currentUser;
+  }
+
+  /** Añade las colecciones nuevas a datos locales creados con versiones anteriores. */
+  _migrate() {
+    const d = this.db;
+    d.stories ||= [];
+    d.storyViews ||= {};
+    d.seenStories ||= [];
+    d.posts.forEach((p) => { p.repostCount ??= 0; p.repostOf ??= null; p.quoteOf ??= null; });
+    d.messages.forEach((m) => { m.media ??= null; });
   }
 
   _persist(now = false) {
@@ -178,12 +189,13 @@ export class LocalBackend {
       id: u.id, username: u.username, displayName: u.displayName || u.username, bio: u.bio || '', avatarUrl: u.avatarUrl || '',
       avatarEmoji: u.avatarEmoji || '', bannerUrl: u.bannerUrl || '', links: u.links || [], interests: u.interests || [],
       dmPolicy: u.dmPolicy || 'everyone', verified: !!u.verified, isBot: !!u.isBot, createdAt: u.createdAt,
+      pinnedPostId: u.pinnedPostId || null,
     };
     if (full) {
       const meId = this.db.me;
       p.followers = this._followerCount(u.id);
       p.following = this.db.follows.filter((f) => f.followerId === u.id).length;
-      p.postsCount = this.db.posts.filter((x) => x.authorId === u.id && x.threadIndex === 0).length;
+      p.postsCount = this.db.posts.filter((x) => x.authorId === u.id && x.threadIndex === 0 && x.kind !== 'repost').length;
       p.hypeReceived = this.db.posts.filter((x) => x.authorId === u.id).reduce((a, x) => a + x.hypeCount, 0);
       p.isFollowing = !!meId && this.db.follows.some((f) => f.followerId === meId && f.followingId === u.id);
       p.followsYou = !!meId && this.db.follows.some((f) => f.followerId === u.id && f.followingId === meId);
@@ -198,7 +210,11 @@ export class LocalBackend {
     return p ? { id: p.id, name: p.name, tagline: p.tagline, emoji: p.emoji, color: p.color, coverUrl: p.coverUrl, hypeCount: p.hypeCount, stage: p.stage } : null;
   }
 
-  _post(p) {
+  _quoteSummary(q) {
+    return { id: q.id, kind: q.kind, body: q.body, media: (q.media || []).slice(0, 1), createdAt: q.createdAt, author: this._profile(this.db.users[q.authorId]) };
+  }
+
+  _post(p, depth = 0) {
     if (!p) return null;
     const meId = this.db.me;
     const bm = meId ? this.db.bookmarks.find((b) => b.postId === p.id) : null;
@@ -210,7 +226,19 @@ export class LocalBackend {
       hyped: this.db.myHypes.includes(p.id),
       bookmarked: !!bm,
       folderId: bm?.folderId || null,
+      repostCount: p.repostCount || 0,
+      reposted: !!meId && this.db.posts.some((x) => x.kind === 'repost' && x.authorId === meId && x.repostOf === p.id),
+      original: null,
+      quoted: null,
     };
+    if (p.kind === 'repost' && depth === 0) {
+      const orig = this.db.posts.find((x) => x.id === p.repostOf);
+      out.original = orig && this._canView(orig) ? this._post(orig, 1) : null;
+    }
+    if (p.quoteOf) {
+      const q = this.db.posts.find((x) => x.id === p.quoteOf);
+      out.quoted = q && this._canView(q) ? this._quoteSummary(q) : null;
+    }
     if (out.poll) {
       out.poll.myVotes = this.db.myVotes[p.id] || [];
       out.poll.closed = new Date(out.poll.closesAt).getTime() < Date.now();
@@ -235,7 +263,7 @@ export class LocalBackend {
 
   _notify(n) {
     const prefs = state.settings.notify || {};
-    const kind = n.type.startsWith('project') ? 'project' : n.type.startsWith('group') ? 'group' : n.type;
+    const kind = n.type.startsWith('project') ? 'project' : n.type.startsWith('group') ? 'group' : n.type === 'quote' ? 'repost' : n.type;
     if (prefs[kind] === false) return;
     const item = { id: uuid(), readAt: null, createdAt: nowIso(), postId: null, projectId: null, groupId: null, body: '', ...n };
     this.db.notifications.unshift(item);
@@ -433,6 +461,7 @@ export class LocalBackend {
   async feed({ tab = 'foryou', offset = 0, limit = 10, ...filters } = {}) {
     const meId = this.db.me;
     let list = this.db.posts.filter((p) => p.threadIndex === 0 && p.kind !== 'short' && this._canView(p));
+    if (tab === 'foryou' || tab === 'top' || filters.q || filters.tag) list = list.filter((p) => p.kind !== 'repost');
     list = this._filterPosts(list, filters);
     if (tab === 'following') {
       const following = new Set(this.db.follows.filter((f) => f.followerId === meId).map((f) => f.followingId));
@@ -505,7 +534,7 @@ export class LocalBackend {
     return out;
   }
 
-  async createPost({ parts, kind = 'post', visibility = 'public', groupId = null, sensitive = false, projectId = null, game = null }, { onProgress } = {}) {
+  async createPost({ parts, kind = 'post', visibility = 'public', groupId = null, sensitive = false, projectId = null, game = null, quoteOf = null }, { onProgress } = {}) {
     const me = this._requireMe();
     if (!parts?.length) throw new Error('El post está vacío');
     if (groupId && !this._isMember(groupId)) throw new Error('Únete al grupo para publicar en él');
@@ -523,7 +552,7 @@ export class LocalBackend {
           closesAt: new Date(Date.now() + (part.poll.durationHours || 24) * H).toISOString(),
           counts: part.poll.options.map(() => 0), voters: 0,
         } : null,
-        groupId, projectId: first ? projectId : null, game: first ? game : null,
+        groupId, projectId: first ? projectId : null, game: first ? game : null, quoteOf: first ? quoteOf : null, repostOf: null, repostCount: 0,
         threadRootId: parts.length > 1 ? rootId : null, threadIndex: created.length, threadCount: 1,
         visibility, sensitive, tags: extractTags(part.body), hypeCount: 0, commentCount: 0, createdAt: new Date(Date.now() + i).toISOString(), editedAt: null,
       };
@@ -545,6 +574,49 @@ export class LocalBackend {
     return root;
   }
 
+  // ---------------- reposts ----------------
+  async repost(postId) {
+    const me = this._requireMe();
+    const orig = this.db.posts.find((x) => x.id === postId);
+    if (!orig || orig.kind === 'repost') throw new Error('Este post no se puede repostear');
+    if (!this.db.posts.some((x) => x.kind === 'repost' && x.authorId === me.id && x.repostOf === postId)) {
+      this.db.posts.push({
+        id: uuid(), kind: 'repost', authorId: me.id, body: '', media: [], poll: null, groupId: null, projectId: null, game: null,
+        threadRootId: null, threadIndex: 0, threadCount: 1, visibility: 'public', sensitive: false, tags: [], hypeCount: 0, commentCount: 0,
+        repostOf: postId, quoteOf: null, repostCount: 0, createdAt: nowIso(), editedAt: null,
+      });
+      orig.repostCount = (orig.repostCount || 0) + 1;
+      this._persist();
+      bus.emit('post:update', this._post(orig));
+    }
+    return { repostCount: orig.repostCount, reposted: true };
+  }
+
+  async unrepost(postId) {
+    const me = this._requireMe();
+    const orig = this.db.posts.find((x) => x.id === postId);
+    const before = this.db.posts.length;
+    this.db.posts = this.db.posts.filter((x) => !(x.kind === 'repost' && x.authorId === me.id && x.repostOf === postId));
+    if (orig && this.db.posts.length < before) orig.repostCount = Math.max(0, (orig.repostCount || 0) - 1);
+    this._persist();
+    if (orig) bus.emit('post:update', this._post(orig));
+    return { repostCount: orig?.repostCount || 0, reposted: false };
+  }
+
+  // ---------------- post fijado ----------------
+  async pinPost(postId) {
+    const me = this._requireMe();
+    if (postId) {
+      const p = this.db.posts.find((x) => x.id === postId);
+      if (!p || p.authorId !== me.id || p.kind === 'repost') throw new Error('Solo puedes fijar uno de tus posts');
+    }
+    me.pinnedPostId = postId || null;
+    this._persist();
+    const prof = this.currentUser;
+    bus.emit('profile:update', prof);
+    return prof;
+  }
+
   async updatePost(id, { body }) {
     const p = this.db.posts.find((x) => x.id === id);
     if (!p || p.authorId !== this.db.me) throw new Error('No puedes editar este post');
@@ -560,8 +632,10 @@ export class LocalBackend {
   async deletePost(id) {
     const p = this.db.posts.find((x) => x.id === id);
     if (!p || p.authorId !== this.db.me) throw new Error('No puedes borrar este post');
+    if (p.kind === 'repost') { await this.unrepost(p.repostOf); bus.emit('post:delete', { id }); return; }
     const ids = new Set([id, ...this.db.posts.filter((x) => x.threadRootId === id).map((x) => x.id)]);
-    this.db.posts = this.db.posts.filter((x) => !ids.has(x.id));
+    this.db.posts = this.db.posts.filter((x) => !ids.has(x.id) && !(x.kind === 'repost' && ids.has(x.repostOf)));
+    this.db.posts.forEach((x) => { if (ids.has(x.quoteOf)) x.quoteOf = null; });
     this.db.comments = this.db.comments.filter((c) => !ids.has(c.postId));
     this.db.bookmarks = this.db.bookmarks.filter((b) => !ids.has(b.postId));
     this.db.myHypes = this.db.myHypes.filter((h) => !ids.has(h));
@@ -713,6 +787,18 @@ export class LocalBackend {
     const n = 2 + Math.floor(Math.random() * 3);
     for (let k = 0; k < n; k++) this._later(() => this._botHype(p, this._botFor(p)), 2500 + k * (2500 + Math.random() * 4000));
     if (Math.random() < 0.75) this._later(() => this._botComment(p, this._botFor(p)), 7000 + Math.random() * 6000);
+    if (Math.random() < 0.4) {
+      this._later(() => {
+        if (!this.db.posts.includes(p)) return;
+        const botId = this._botFor(p);
+        if (this.db.posts.some((x) => x.kind === 'repost' && x.authorId === botId && x.repostOf === p.id)) return;
+        this.db.posts.push({ id: uuid(), kind: 'repost', authorId: botId, body: '', media: [], poll: null, groupId: null, projectId: null, game: null, threadRootId: null, threadIndex: 0, threadCount: 1, visibility: 'public', sensitive: false, tags: [], hypeCount: 0, commentCount: 0, repostOf: p.id, quoteOf: null, repostCount: 0, createdAt: nowIso(), editedAt: null });
+        p.repostCount = (p.repostCount || 0) + 1;
+        this._persist();
+        bus.emit('post:update', this._post(p));
+        if (p.authorId === this.db.me) this._notify({ type: 'repost', actorId: botId, postId: p.id });
+      }, 9000 + Math.random() * 8000);
+    }
   }
 
   _startAmbient() {
@@ -1085,10 +1171,10 @@ export class LocalBackend {
     return this.db.messages.filter((m) => m.conversationId === conversationId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
-  _pushMessage(c, senderId, body) {
-    const m = { id: uuid(), conversationId: c.id, senderId, body, createdAt: nowIso() };
+  _pushMessage(c, senderId, body, media = null) {
+    const m = { id: uuid(), conversationId: c.id, senderId, body, media, createdAt: nowIso() };
     this.db.messages.push(m);
-    c.lastMessage = excerpt(body, 120);
+    c.lastMessage = body ? excerpt(body, 120) : ({ audio: '🎤 Nota de voz', image: '📷 Foto', gif: 'GIF' })[media?.type] || '';
     c.lastMessageAt = m.createdAt;
     if (senderId === this.db.me) c.lastRead = { ...(c.lastRead || {}), [senderId]: m.createdAt };
     this._persist();
@@ -1096,13 +1182,19 @@ export class LocalBackend {
     return m;
   }
 
-  async sendMessage(conversationId, body) {
+  async uploadDmMedia(conversationId, blob, opts = {}) {
+    return { url: await this.uploadMedia(blob, opts) };
+  }
+
+  async resolveDmMedia() { return {}; }
+
+  async sendMessage(conversationId, body, media = null) {
     const me = this._requireMe();
     const c = this.db.conversations.find((x) => x.id === conversationId && x.members.includes(me.id));
     if (!c) throw new Error('Conversación no encontrada');
     const text = String(body || '').trim().slice(0, 4000);
-    if (!text) throw new Error('Mensaje vacío');
-    const m = this._pushMessage(c, me.id, text);
+    if (!text && !media) throw new Error('Mensaje vacío');
+    const m = this._pushMessage(c, me.id, text, media);
     const otherId = c.members.find((x) => x !== me.id);
     const bot = this.db.users[otherId];
     if (bot?.isBot && !/^[📹📞]/u.test(text)) {
@@ -1113,12 +1205,90 @@ export class LocalBackend {
         try { if (this.botReplyHook) text2 = await this.botReplyHook(this._profile(bot), history.map((h) => ({ fromMe: h.senderId === me.id, body: h.body }))); } catch { text2 = null; }
         await sleep(text2 ? 300 : 1400 + Math.random() * 1600);
         bus.emit('typing', { conversationId, userId: otherId, typing: false });
-        this._pushMessage(c, otherId, text2 || pick(BOT_REPLIES));
+        const mediaReply = media ? ({ audio: '¡Qué buena nota de voz! 🎧 Te respondo enseguida', image: '¡Qué foto! 😍', gif: '😂😂' })[media.type] : null;
+        this._pushMessage(c, otherId, mediaReply || text2 || pick(BOT_REPLIES));
         this._emitUnread();
       };
       this._later(reply, 700);
     }
     return m;
+  }
+
+  // ---------------- historias ----------------
+  _storyOut(s) {
+    return { ...structuredClone(s), author: this._profile(this.db.users[s.authorId]), seen: s.authorId === this.db.me || this.db.seenStories.includes(s.id) };
+  }
+
+  _ensureDemoStories() {
+    const now = Date.now();
+    this.db.stories = this.db.stories.filter((s) => new Date(s.expiresAt).getTime() > now || s.authorId === this.db.me);
+    if (this.db.stories.some((s) => this.db.users[s.authorId]?.isBot)) return;
+    DEMO_STORIES.forEach((d, i) => {
+      const created = now - (i * 1.9 + 0.4) * H;
+      this.db.stories.push({ id: uuid(), authorId: d.author, media: d.media ? { filter: 'none', poster: '', ...d.media } : null, caption: d.caption, bg: d.bg || null, createdAt: new Date(created).toISOString(), expiresAt: new Date(created + 24 * H).toISOString() });
+    });
+    this._persist();
+  }
+
+  async storiesFeed() {
+    this._ensureDemoStories();
+    const now = Date.now();
+    const meId = this.db.me;
+    const following = new Set(this.db.follows.filter((f) => f.followerId === meId).map((f) => f.followingId));
+    const groups = new Map();
+    for (const s of this.db.stories) {
+      if (new Date(s.expiresAt).getTime() <= now) continue;
+      if (!groups.has(s.authorId)) groups.set(s.authorId, []);
+      groups.get(s.authorId).push(this._storyOut(s));
+    }
+    const out = [...groups.entries()].map(([uid, stories]) => ({
+      user: this._profile(this.db.users[uid]), isMe: uid === meId, following: following.has(uid),
+      stories: stories.sort((a, b) => a.createdAt.localeCompare(b.createdAt)), allSeen: stories.every((s) => s.seen),
+    })).filter((g) => g.user);
+    out.sort((a, b) => (b.isMe - a.isMe) || (a.allSeen - b.allSeen) || (b.following - a.following) || b.stories.at(-1).createdAt.localeCompare(a.stories.at(-1).createdAt));
+    return out;
+  }
+
+  async createStory({ file = null, mediaType = 'image', caption = '', bg = null, filter = 'none', poster = null, width = 0, height = 0, duration = 0 }) {
+    const me = this._requireMe();
+    const text = String(caption || '').trim().slice(0, 300);
+    let media = null;
+    if (file) media = { type: mediaType, url: await this.uploadMedia(file), poster: poster ? await this.uploadMedia(poster) : '', filter, width, height, duration };
+    if (!media && !text) throw new Error('La historia está vacía');
+    const now = Date.now();
+    const s = { id: uuid(), authorId: me.id, media, caption: text, bg: media ? null : (bg || ['#8b5cf6', '#ec4899']), createdAt: new Date(now).toISOString(), expiresAt: new Date(now + 24 * H).toISOString() };
+    this.db.stories.push(s);
+    this.db.storyViews[s.id] = [];
+    this._persist();
+    if (state.settings.simulateActivity) {
+      BOTS.slice(1, 6).forEach((b, k) => this._later(() => {
+        const v = this.db.storyViews[s.id];
+        if (v && !v.includes(b.id)) { v.push(b.id); this._persist(); }
+      }, 2500 + k * 3500));
+    }
+    const out = this._storyOut(s);
+    bus.emit('story:created', out);
+    return out;
+  }
+
+  async markStorySeen(id) {
+    if (this.db.seenStories.includes(id)) return;
+    this.db.seenStories.push(id);
+    this.db.seenStories = this.db.seenStories.slice(-500);
+    this._persist();
+  }
+
+  async storyViewers(id) {
+    return (this.db.storyViews[id] || []).map((uid) => this._profile(this.db.users[uid])).filter(Boolean);
+  }
+
+  async deleteStory(id) {
+    const s = this.db.stories.find((x) => x.id === id);
+    if (!s || s.authorId !== this.db.me) throw new Error('No puedes borrar esta historia');
+    this.db.stories = this.db.stories.filter((x) => x.id !== id);
+    delete this.db.storyViews[id];
+    this._persist();
+    bus.emit('story:deleted', { id });
   }
 
   // ---------------- llamadas (simuladas en modo demo) ----------------

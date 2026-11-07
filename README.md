@@ -25,6 +25,11 @@ Funciona **sin instalar nada**: son archivos estáticos (HTML + CSS + módulos J
 | **Grupos** | Públicos o privados (con solicitudes que aprueba el admin), feed propio, miembros y publicación directa en el grupo. |
 | **Hype IA (Gemini)** | Chat con streaming e imágenes, ideas de posts, "¿Qué me perdí?". En el editor: mejorar, acortar, cambiar tono, traducir, hashtags, convertir en hilo y crear encuestas. También resume y explica posts, genera texto alternativo y sugiere respuestas. |
 | **Social** | Perfiles con portada, bio en Markdown, enlaces e intereses; seguidores; **mensajes privados** en tiempo real; notificaciones; explorar y buscar; tendencias. |
+| **Historias (24 h)** | Barra de historias en el inicio. Puedes subir una foto (con filtros), un vídeo o un texto sobre un fondo de color. El visor es a pantalla completa: avanza solo, tocas a la derecha o a la izquierda para pasar, mantienes pulsado para pausar y deslizas hacia abajo para cerrar. Puedes responder o mandar 🔥 por mensaje privado. En las tuyas ves quién las vio y puedes borrarlas. |
+| **Repostear y citar** | Botón 🔁 en cada post: repostea (aparece en tu perfil y en los feeds Siguiendo y Recientes) o cita el post con tu comentario. El autor recibe un aviso. |
+| **Post fijado** | Fija uno de tus posts arriba del todo en tu perfil, desde el menú «⋯» del post. |
+| **Logros** | 13 insignias en el perfil, como primer post, 100 de hype, seguidores, proyectos, récords en los juegos o racha de 7 días. La pestaña «Logros» muestra tu progreso. |
+| **Notas de voz y fotos en mensajes** | En los chats puedes grabar notas de voz (hasta 2 min, con forma de onda y velocidad 1×/1,5×/2×) y mandar fotos y GIFs. En la nube van a un bucket **privado**: solo las personas del chat pueden abrirlas, mediante enlaces firmados que caducan. |
 | **Videollamadas** | Llamadas de vídeo y de voz 1 a 1 desde un chat o un perfil. Permiten silenciar el micrófono, apagar la cámara, cambiar de cámara en el móvil, compartir pantalla en el ordenador y minimizar la llamada para seguir navegando. Incluyen aviso de llamada entrante con tono y vibración, y registro de la llamada en el chat. En modo demo puedes llamar a los usuarios de ejemplo. |
 | **Ajustes avanzados** | Tema (oscuro, claro, AMOLED, sistema), 9 colores de acento + uno personalizado, tamaño de texto, esquinas, densidad, autoplay, ahorro de datos, filtros de contenido, privacidad de mensajes, notificaciones (incluidas las del navegador), modelo y personalidad de la IA, conexión a la nube, accesibilidad, exportar datos y modo desarrollador. |
 | **Extras** | Racha diaria 🔥 (conserva la de la versión anterior), atajos de teclado (`?` para verlos), PWA instalable y diseño adaptado a móvil y escritorio. |
@@ -98,6 +103,21 @@ Opcional: `supabase secrets set GEMINI_MODEL=gemini-3.8-flash AI_DAILY_LIMIT=100
 
 ---
 
+## 🆕 Actualizar la base de datos (historias, reposts, notas de voz…)
+
+Si ya tenías Hype en Supabase, vuelve a ejecutar [`supabase/schema.sql`](supabase/schema.sql) en el **SQL Editor**. Es seguro, no borra datos. Añade:
+
+- Las tablas `stories` y `story_views`. Las historias caducan a las 24 h y solo el autor ve quién las vio.
+- Los reposts y las citas (`repost_of`, `quote_of`, `repost_count`) y el post fijado (`pinned_post_id`).
+- Los adjuntos en mensajes (`messages.media`) y el bucket privado `dm-media`.
+
+Si tu proyecto viene de la **versión antigua de Hype**, el script también:
+
+- Renombra la tabla `stories` antigua (`user_id`, `media_url`…) a `stories_legacy` sin borrar nada y crea la nueva. Antes daba el error `column "author_id" does not exist`.
+- Cierra el acceso desde la API a las tablas antiguas que ya no se usan (`direct_messages`, `post_likes`, `post_comments`, `friendships`, `likes`, `stories_legacy`). Algunas, como los mensajes privados antiguos, se podían leer con la clave pública. Los datos se conservan; si no los necesitas, puedes borrar esas tablas desde el Table Editor.
+
+Hasta que lo ejecutes, la web sigue funcionando como antes. Las funciones nuevas muestran el aviso «vuelve a ejecutar supabase/schema.sql».
+
 ## 📹 Videollamadas
 
 Las llamadas usan **WebRTC**: el audio y el vídeo viajan directamente entre los dos navegadores, cifrados de extremo a extremo, y Supabase Realtime solo sirve para conectarlos. No hace falta otro servidor.
@@ -132,7 +152,8 @@ js/main.js            Armazón, rutas, atajos, racha y avisos
 js/core/              DOM seguro, router, estado/ajustes, Markdown, iconos, UI
 js/data/              Backend local (demo) y backend Supabase con la misma API
 js/ai/gemini.js       Cliente de Gemini (streaming, tareas de IA)
-js/components/        Post, editor de posts/hilos, editor Markdown, medios, selectores
+js/components/        Post, editor de posts/hilos, editor Markdown, medios, selectores,
+                      historias (stories.js), adjuntos de mensajes (dm-media.js), logros
 js/views/             Feed, shorts, juegos, grupos, proyectos, perfil, ajustes…
 js/games/             Los 5 mini-juegos
 js/calls/             Videollamadas: WebRTC (core.js) e interfaz (ui.js)
@@ -146,6 +167,8 @@ supabase/functions/hype-ai/  Edge Function proxy de Gemini
 - Todo el texto de usuario se escapa antes de renderizarse. El Markdown se aplica sobre texto ya escapado y solo permite enlaces `http(s)`/`mailto`.
 - RLS en todas las tablas:
   - Marcadores, notificaciones y mensajes solo los ven sus dueños.
+  - Las notas de voz y fotos de los mensajes van a un bucket privado que solo pueden leer las personas del chat.
+  - Las listas de quién vio una historia solo las ve su autor.
   - Los posts de grupos privados solo los ven sus miembros.
   - Los contadores (hype, comentarios, seguidores) solo los cambian triggers del servidor.
   - Los votos de encuestas son anónimos.

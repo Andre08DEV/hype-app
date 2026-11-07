@@ -14,6 +14,7 @@ import { createEditor } from './editor.js';
 import { openGifPicker, openEmojiMenu } from './pickers.js';
 import { requireUser } from './session.js';
 import { gameById } from '../games/registry.js';
+import { renderQuoteCard } from './post-card.js';
 
 export const POST_LIMIT = 1000;
 const MAX_PARTS = 25;
@@ -72,9 +73,10 @@ export function openComposer(opts = {}) {
     game: opts.game || null,
     projectId: opts.projectId || null,
     project: opts.project || null,
+    quote: opts.quote || null,
     publishing: false,
   };
-  const hasInitial = !!(opts.text || opts.parts?.length || opts.game || opts.projectId || opts.files?.length || opts.poll);
+  const hasInitial = !!(opts.text || opts.parts?.length || opts.game || opts.projectId || opts.files?.length || opts.poll || opts.quote);
 
   const root = toElement(html`<div class="composer">
     <div class="composer-head">
@@ -104,7 +106,7 @@ export function openComposer(opts = {}) {
 
   // ---------- Borrador ----------
   const saveDraft = debounce(() => {
-    if (st.publishing) return;
+    if (st.publishing || st.quote) return;
     const data = { parts: st.parts.map((p) => ({ body: p.editor.value, poll: p.poll })), visibility: st.visibility, groupId: st.groupId, groupName: st.groupName, savedAt: Date.now() };
     const empty = data.parts.every((p) => !p.body.trim() && !p.poll);
     try { if (empty) clearDraft(); else localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); } catch { /* cuota */ }
@@ -116,7 +118,7 @@ export function openComposer(opts = {}) {
     const part = { id: uuid(), media: [], poll, editor: null, el: null };
     part.editor = createEditor({
       value: body,
-      placeholder: st.parts.length === 0 ? (st.kind === 'game' ? 'Reta a la comunidad…' : '¿Qué está pasando? Usa **Markdown**, @menciones y #hashtags') : 'Continúa el hilo…',
+      placeholder: st.parts.length === 0 ? (st.kind === 'game' ? 'Reta a la comunidad…' : st.quote ? 'Añade tu comentario a la cita…' : '¿Qué está pasando? Usa **Markdown**, @menciones y #hashtags') : 'Continúa el hilo…',
       borderless: true,
       rows: 3,
       onChange: () => { updateRing(part); updatePublish(); saveDraft(); },
@@ -428,14 +430,14 @@ export function openComposer(opts = {}) {
       poll: p.poll ? { options: p.poll.options.map((o) => o.trim()).filter(Boolean), multiple: p.poll.multiple, durationHours: p.poll.durationHours } : null,
     }));
     try {
-      const post = await api.createPost({ parts: payload, kind: st.kind, visibility: st.visibility, groupId: st.groupId, sensitive: st.sensitive, projectId: st.projectId, game: st.game }, {
+      const post = await api.createPost({ parts: payload, kind: st.kind, visibility: st.visibility, groupId: st.groupId, sensitive: st.sensitive, projectId: st.projectId, game: st.game, quoteOf: st.quote?.id || null }, {
         onProgress: (m, p) => { const bar = root.querySelector(`[data-media="${CSS.escape(m._id)}"] [data-progress]`); if (bar) bar.style.width = Math.round(p * 100) + '%'; },
       });
       clearDraft();
       st.publishing = false;
       modal.close();
       bus.emit('post:created', post);
-      toast(payload.length > 1 ? `Hilo publicado 🧵 (${payload.length} posts)` : 'Publicado 🚀', { type: 'success', action: { label: 'Ver', onClick: () => navigate(`/post/${post.id}`) } });
+      toast(payload.length > 1 ? `Hilo publicado 🧵 (${payload.length} posts)` : st.quote ? 'Cita publicada 💬' : 'Publicado 🚀', { type: 'success', action: { label: 'Ver', onClick: () => navigate(`/post/${post.id}`) } });
     } catch (err) {
       st.publishing = false;
       publishBtn.classList.remove('loading');
@@ -539,6 +541,9 @@ export function openComposer(opts = {}) {
   } else if (st.project) {
     const p = st.project;
     embed.innerHTML = String(html`<div class="embed" style="margin-top:8px">${coverBox(p)}<span class="meta"><span class="title">${p.name}</span><br><span class="small muted">${p.tagline}</span><span class="row small" style="margin-top:4px">${stagePill(p.stage)}</span></span></div>`);
+  } else if (st.quote) {
+    const q = st.quote;
+    embed.innerHTML = String(html`<div style="margin-top:8px">${renderQuoteCard({ id: q.id, kind: q.kind, body: q.body, media: (q.media || []).slice(0, 1), createdAt: q.createdAt, author: q.author }, { link: false })}</div>`);
   }
   paintAudience();
   refreshParts();

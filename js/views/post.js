@@ -15,7 +15,15 @@ export async function render(el, ctx) {
   el.querySelector('[data-back]').onclick = () => back();
   const body = $('[data-body]', el);
   let post;
-  try { post = cachePost(await api.getPost(ctx.params.id)); } catch (err) {
+  try {
+    post = await api.getPost(ctx.params.id);
+    // Un enlace a un repost lleva al post original
+    if (post.kind === 'repost') {
+      if (!post.original) throw new Error('El post reposteado ya no está disponible');
+      post = post.original;
+    }
+    cachePost(post);
+  } catch (err) {
     body.innerHTML = String(emptyState({ emoji: '🫥', title: 'Post no disponible', text: err.message, action: html`<a class="btn btn-secondary" href="#/">Ir al inicio</a>` }));
     return;
   }

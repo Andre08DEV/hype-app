@@ -95,7 +95,7 @@ function secPrivacidad() {
 function secNotificaciones() {
   const supported = 'Notification' in window;
   return html`<h2>Notificaciones</h2>
-    ${group('Avisarme cuando…', html`${toggle('notify.hype', '🔥 Alguien da hype a mis posts')}${toggle('notify.comment', '💬 Comentan mis posts')}${toggle('notify.mention', '📣 Me mencionan')}${toggle('notify.follow', '👋 Alguien me sigue')}${toggle('notify.project', '🚀 Actividad en mis proyectos')}${toggle('notify.group', '👥 Actividad en mis grupos')}${toggle('notify.message', '✉️ Mensajes nuevos')}`)}
+    ${group('Avisarme cuando…', html`${toggle('notify.hype', '🔥 Alguien da hype a mis posts')}${toggle('notify.comment', '💬 Comentan mis posts')}${toggle('notify.mention', '📣 Me mencionan')}${toggle('notify.follow', '👋 Alguien me sigue')}${toggle('notify.repost', '🔁 Repostean o citan mis posts')}${toggle('notify.project', '🚀 Actividad en mis proyectos')}${toggle('notify.group', '👥 Actividad en mis grupos')}${toggle('notify.message', '✉️ Mensajes nuevos')}`)}
     ${group('Cómo', html`${toggle('notify.browser', 'Avisos del navegador', supported ? `Permiso actual: ${Notification.permission === 'granted' ? 'concedido ✅' : Notification.permission === 'denied' ? 'bloqueado ❌ (cámbialo en el candado de la barra de direcciones)' : 'sin decidir'}` : 'Tu navegador no los soporta.')}
       ${toggle('notify.sound', 'Sonido al recibir avisos')}`)}`;
 }

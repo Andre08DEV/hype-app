@@ -3,12 +3,12 @@ import { html, toElement, $$ } from '../core/dom.js';
 import { icon } from '../core/icons.js';
 import { state, bus, updateSettings } from '../core/store.js';
 import { renderMarkdown, stripMarkdown } from '../core/markdown.js';
-import { timeAgo, formatCount, formatNumber, plural, timeLeft, formatDateTime, copyText, vibrate } from '../core/utils.js';
+import { timeAgo, formatCount, formatNumber, plural, timeLeft, formatDateTime, copyText, vibrate, excerpt } from '../core/utils.js';
 import { toast, toastError, openMenu, openModal, confirmDialog, openLightbox, hypeBurst, promptDialog } from '../core/ui.js';
 import { navigate } from '../core/router.js';
 import { api } from '../data/api.js';
-import { avatar, verified, colorVars, coverBox, stagePill } from './common.js';
-import { renderMedia, observeVideos } from './media.js';
+import { avatar, verified, colorVars, coverBox, stagePill, srcAttr } from './common.js';
+import { renderMedia, observeVideos, filterClass } from './media.js';
 import { gameById } from '../games/registry.js';
 import { requireUser } from './session.js';
 
@@ -60,11 +60,47 @@ function renderProjectEmbed(p) {
   return html`<a class="embed" href="#/p/${p.id}">${coverBox(p)}<span class="meta"><span class="title">${p.name}</span><br><span class="small muted">${p.tagline}</span><span class="row small" style="gap:8px;margin-top:4px">${stagePill(p.stage)}<span class="dim">🔥 ${formatCount(p.hypeCount)}</span></span></span>${icon('chevronRight', { cls: 'dim' })}</a>`;
 }
 
+/** Tarjeta compacta de un post citado ({ id, kind, body, media, createdAt, author }). */
+export function renderQuoteCard(q, { link = true } = {}) {
+  const a = q.author || {};
+  const m = q.media?.[0];
+  const thumb = m ? (m.type === 'video' ? m.poster : m.url) : '';
+  const text = excerpt(stripMarkdown(q.body || ''), 240);
+  const fallback = q.kind === 'game' ? '🎮 Reto de juego' : q.kind === 'project' ? '🚀 Proyecto' : '📊 Encuesta';
+  const inner = html`<span class="quote-head">${avatar(a, 'xs')}<b class="truncate">${a.displayName || a.username}</b>${verified(a)}<span class="dim truncate">@${a.username} · ${timeAgo(q.createdAt)}</span></span>
+    <span class="quote-main">
+      ${text ? html`<span class="quote-text">${text}</span>` : ''}
+      ${thumb ? html`<span class="quote-thumb ${m.type === 'video' ? 'is-video' : ''}"><img ${srcAttr(thumb)} class="${filterClass(m.filter)}" alt="${m.alt || ''}" loading="lazy">${m.type === 'video' ? html`<i>${icon('play', { size: 14 })}</i>` : ''}</span>` : ''}
+      ${!text && !thumb ? html`<span class="quote-text dim">${fallback}</span>` : ''}
+    </span>`;
+  return link
+    ? html`<a class="quote-card" href="#/post/${q.id}" aria-label="Post citado de ${a.displayName || a.username}">${inner}</a>`
+    : html`<div class="quote-card">${inner}</div>`;
+}
+
+/** Post citado dentro de otro post (cita). */
+function renderQuote(post) {
+  if (!post.quoted) return html`<div class="quote-card unavailable">${icon('eyeOff', { size: 16 })}<span>Este post ya no está disponible</span></div>`;
+  return renderQuoteCard(post.quoted);
+}
+
+/** Un repost se muestra como el post original con la línea "X reposteó". */
+function renderRepost(row, opts) {
+  const by = row.author || {};
+  if (row.original) return renderPost(row.original, { ...opts, repostBy: by, repostId: row.id });
+  return html`<article class="post repost-stub" data-repost-id="${row.id}" data-reposter="${by.id || ''}">
+    <div class="post-gutter"><span class="repost-stub-icon">${icon('repeat', { size: 18 })}</span></div>
+    <div class="post-main"><p class="small muted"><a class="bold" href="#/u/${encodeURIComponent(by.username || '')}">${by.displayName || by.username}</a> reposteó un post que ya no está disponible.</p></div>
+  </article>`;
+}
+
 function shouldClamp(body) {
   return body.length > CLAMP_CHARS || body.split('\n').length > CLAMP_LINES;
 }
 
-export function renderPost(post, { variant = 'feed', threadLine = false, focused = false } = {}) {
+export function renderPost(post, opts = {}) {
+  if (post?.kind === 'repost') return renderRepost(post, opts);
+  const { variant = 'feed', threadLine = false, focused = false, repostBy = null, repostId = '', pinned = false } = opts;
   cachePost(post);
   const a = post.author || {};
   const s = state.settings;
@@ -72,7 +108,12 @@ export function renderPost(post, { variant = 'feed', threadLine = false, focused
   const isThreadRoot = (post.threadCount || 1) > 1 && post.threadIndex === 0;
   const isPart = post.threadIndex > 0;
   const line = threadLine || (variant === 'feed' && isThreadRoot);
-  return html`<article class="post ${variant !== 'detail' ? 'clickable' : ''} ${focused ? 'focused' : ''} ${isPart ? 'thread-part' : ''}" data-post-id="${post.id}" data-variant="${variant}" tabindex="-1">
+  const meId = state.user?.id;
+  return html`<article class="post ${variant !== 'detail' ? 'clickable' : ''} ${focused ? 'focused' : ''} ${isPart ? 'thread-part' : ''}" data-post-id="${post.id}" data-variant="${variant}" ${repostId ? html`data-repost-id="${repostId}" data-reposter="${repostBy?.id || ''}"` : ''} ${pinned ? 'data-pinned' : ''} tabindex="-1">
+    ${repostBy || pinned ? html`<div class="post-top-context">
+      ${pinned ? html`<span class="pinned-label">${icon('pin', { size: 14 })} Fijado</span>` : ''}
+      ${repostBy ? html`<a href="#/u/${encodeURIComponent(repostBy.username || '')}" class="repost-label">${icon('repeat', { size: 14 })} ${repostBy.id === meId ? 'Reposteaste' : `${repostBy.displayName || repostBy.username} reposteó`}</a>` : ''}
+    </div>` : ''}
     <div class="post-gutter">${avatar(a, 'md', { link: true })}${line ? html`<div class="thread-line"></div>` : ''}</div>
     <div class="post-main">
       ${post.group || isThreadRoot ? html`<div class="post-context">
@@ -93,9 +134,11 @@ export function renderPost(post, { variant = 'feed', threadLine = false, focused
       ${post.poll ? renderPoll(post) : ''}
       ${post.kind === 'project' ? renderProjectEmbed(post.project) : ''}
       ${post.kind === 'game' ? renderGameEmbed(post) : ''}
+      ${post.quoteOf || post.quoted ? renderQuote(post) : ''}
       <div class="post-actions">
         <button type="button" class="action hype ${post.hyped ? 'on' : ''}" data-action="hype" aria-pressed="${post.hyped ? 'true' : 'false'}" aria-label="Dar hype" title="Hype">${icon('flame', { size: 19 })}<span class="count">${s.showHypeCounts || post.authorId !== state.user?.id ? formatCount(post.hypeCount) : ''}</span></button>
         <button type="button" class="action comment" data-action="comment" aria-label="Comentar" title="Comentar">${icon('message', { size: 19 })}<span class="count">${post.commentCount ? formatCount(post.commentCount) : ''}</span></button>
+        <button type="button" class="action repost ${post.reposted ? 'on' : ''}" data-action="repost" aria-pressed="${post.reposted ? 'true' : 'false'}" aria-label="Repostear o citar" title="Repostear o citar">${icon('repeat', { size: 19 })}<span class="count">${post.repostCount ? formatCount(post.repostCount) : ''}</span></button>
         <button type="button" class="action share" data-action="share" aria-label="Compartir" title="Compartir">${icon('share', { size: 19 })}</button>
         <button type="button" class="action save ${post.bookmarked ? 'on' : ''}" data-action="bookmark" aria-pressed="${post.bookmarked ? 'true' : 'false'}" aria-label="Guardar" title="Guardar en carpeta">${icon('bookmark', { size: 19 })}</button>
         <button type="button" class="action ai" data-action="ai" aria-label="Hype IA" title="Hype IA">${icon('sparkles', { size: 19 })}</button>
@@ -134,6 +177,13 @@ export function refreshPostEls(post) {
     }
     const com = el.querySelector('[data-action="comment"] .count');
     if (com) com.textContent = post.commentCount ? formatCount(post.commentCount) : '';
+    const rp = el.querySelector('[data-action="repost"]');
+    if (rp) {
+      rp.classList.toggle('on', !!post.reposted);
+      rp.setAttribute('aria-pressed', post.reposted ? 'true' : 'false');
+      const c = rp.querySelector('.count');
+      if (c) c.textContent = post.repostCount ? formatCount(post.repostCount) : '';
+    }
     el.querySelectorAll('[data-action="bookmark"]').forEach((b) => { b.classList.toggle('on', !!post.bookmarked); b.setAttribute('aria-pressed', post.bookmarked ? 'true' : 'false'); });
     const poll = el.querySelector('[data-poll]');
     if (poll && post.poll && !poll.querySelector('.poll-option.selected')) {
@@ -155,6 +205,7 @@ export function refreshPostEls(post) {
 bus.on('post:update', (patch) => { const p = mergePost(patch); if (p) refreshPostEls(p); });
 bus.on('post:delete', ({ id }) => {
   postCache.delete(id);
+  $$(`[data-repost-id="${CSS.escape(id)}"]`).forEach((el) => el.remove());
   $$(`[data-post-id="${CSS.escape(id)}"]`).forEach((el) => {
     const next = el.nextElementSibling;
     if (next?.matches('.thread-expand, .thread-parts')) next.remove();
@@ -237,6 +288,61 @@ async function quickBookmark(post) {
   } catch (err) { post.bookmarked = false; refreshPostEls(post); toastError(err); }
 }
 
+const canRepost = (post) => post.visibility !== 'followers' && !post.group?.isPrivate && post.kind !== 'repost';
+
+export async function toggleRepost(post, btn) {
+  if (!requireUser('repostear')) return;
+  const was = !!post.reposted;
+  post.reposted = !was;
+  post.repostCount = Math.max(0, (post.repostCount || 0) + (was ? -1 : 1));
+  refreshPostEls(post);
+  if (!was && btn) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); vibrate(10); }
+  try {
+    const r = was ? await api.unrepost(post.id) : await api.repost(post.id);
+    post.repostCount = r.repostCount;
+    post.reposted = r.reposted;
+    refreshPostEls(post);
+    if (was) {
+      // Quita mis filas de repost de este post (en el feed o en mi perfil).
+      $$(`[data-reposter="${CSS.escape(state.user.id)}"][data-post-id="${CSS.escape(post.id)}"]`).forEach((el) => el.remove());
+      toast('Repost eliminado');
+    } else {
+      toast('Reposteado 🔁 Aparecerá en tu perfil', { type: 'success', action: { label: 'Citar', onClick: () => quotePost(post) } });
+      bus.emit('repost:created', { postId: post.id });
+    }
+  } catch (err) {
+    post.reposted = was;
+    post.repostCount = Math.max(0, (post.repostCount || 0) + (was ? 1 : -1));
+    refreshPostEls(post);
+    toastError(err);
+  }
+}
+
+export async function quotePost(post) {
+  if (!requireUser('citar posts')) return;
+  const { openComposer } = await import('./composer.js');
+  openComposer({ quote: post });
+}
+
+function repostMenu(post, anchor) {
+  if (!requireUser('repostear')) return;
+  if (!canRepost(post)) { toast('Solo se pueden repostear y citar posts públicos'); return; }
+  openMenu(anchor, [
+    { label: post.reposted ? 'Deshacer repost' : 'Repostear', icon: 'repeat', danger: !!post.reposted, onClick: () => toggleRepost(post, anchor) },
+    { label: 'Citar', icon: 'quote', onClick: () => quotePost(post) },
+  ], { align: 'left' });
+}
+
+async function togglePin(post) {
+  const pinned = state.user?.pinnedPostId === post.id;
+  try {
+    await api.pinPost(pinned ? null : post.id);
+    if (state.user) state.user.pinnedPostId = pinned ? null : post.id;
+    bus.emit('pin:change', { postId: pinned ? null : post.id });
+    toast(pinned ? 'Post desfijado' : 'Post fijado en tu perfil 📌', { type: 'success' });
+  } catch (err) { toastError(err); }
+}
+
 export async function sharePost(post) {
   const url = postUrl(post.threadRootId && post.threadIndex > 0 ? post.threadRootId : post.id);
   const text = stripMarkdown(post.body).slice(0, 120);
@@ -276,6 +382,10 @@ function postMenu(post, anchor) {
     { divider: true },
   ];
   if (mine) {
+    if (post.kind !== 'repost' && !(post.threadIndex > 0)) {
+      const pinned = state.user?.pinnedPostId === post.id;
+      items.push({ label: pinned ? 'Desfijar del perfil' : 'Fijar en tu perfil', icon: 'pin', onClick: () => togglePin(post) });
+    }
     items.push({ label: 'Editar', icon: 'edit', onClick: () => editPost(post) });
     items.push({
       label: 'Eliminar', icon: 'trash', danger: true,
@@ -415,6 +525,7 @@ export function initPostActions() {
         case 'bookmark': e.preventDefault(); quickBookmark(post); return;
         case 'comment': e.preventDefault(); navigate(`/post/${post.threadRootId && post.threadIndex > 0 ? post.threadRootId : post.id}?reply=1`); return;
         case 'share': e.preventDefault(); sharePost(post); return;
+        case 'repost': e.preventDefault(); repostMenu(post, actionEl); return;
         case 'post-menu': e.preventDefault(); postMenu(post, actionEl); return;
         case 'ai': e.preventDefault(); aiOnPost(post, actionEl); return;
         case 'expand': e.preventDefault(); card.querySelector('.post-body')?.classList.remove('clamped'); actionEl.remove(); return;

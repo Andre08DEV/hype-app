@@ -6,6 +6,8 @@ export function describeNotification(n) {
     case 'hype': return { emoji: '🔥', cls: 'n-hype', text: `${who} le dio hype a tu ${n.post?.kind === 'short' ? 'short' : 'post'}`, href: postHref };
     case 'comment': return { emoji: '💬', cls: 'n-comment', text: `${who} comentó tu post`, href: postHref ? `${postHref}` : '' };
     case 'mention': return { emoji: '📣', cls: 'n-mention', text: `${who} te mencionó`, href: postHref || (n.project ? `#/p/${n.project.id}` : '') };
+    case 'repost': return { emoji: '🔁', cls: 'n-repost', text: `${who} reposteó tu ${n.post?.kind === 'short' ? 'short' : 'post'}`, href: postHref };
+    case 'quote': return { emoji: '💬', cls: 'n-comment', text: `${who} citó tu post`, href: postHref };
     case 'follow': return { emoji: '👋', cls: 'n-follow', text: `${who} empezó a seguirte`, href: n.actor ? `#/u/${encodeURIComponent(n.actor.username)}` : '' };
     case 'project_hype': return { emoji: '🚀', cls: 'n-hype', text: `${who} le dio hype a tu proyecto${n.project ? ` «${n.project.name}»` : ''}`, href: n.project ? `#/p/${n.project.id}` : '' };
     case 'project_comment': return { emoji: '💡', cls: 'n-comment', text: `${who} dejó feedback en${n.project ? ` «${n.project.name}»` : ' tu proyecto'}`, href: n.project ? `#/p/${n.project.id}` : '' };
