@@ -60,6 +60,8 @@ export const DEFAULT_SETTINGS = {
     composerTools: true,
   },
 
+  calls: { allowIncoming: true, startMuted: false, startCameraOff: false, ringtone: true },
+
   cloud: { url: '', anonKey: '', forceLocal: false },
   giphyKey: '',
 

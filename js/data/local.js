@@ -1105,7 +1105,7 @@ export class LocalBackend {
     const m = this._pushMessage(c, me.id, text);
     const otherId = c.members.find((x) => x !== me.id);
     const bot = this.db.users[otherId];
-    if (bot?.isBot) {
+    if (bot?.isBot && !/^[📹📞]/u.test(text)) {
       bus.emit('typing', { conversationId, userId: otherId, typing: true });
       const history = this.db.messages.filter((x) => x.conversationId === c.id).slice(-12);
       const reply = async () => {
@@ -1119,6 +1119,23 @@ export class LocalBackend {
       this._later(reply, 700);
     }
     return m;
+  }
+
+  // ---------------- llamadas (simuladas en modo demo) ----------------
+  async startCall({ conversationId, calleeId, kind = 'video' }) {
+    const me = this._requireMe();
+    return { id: uuid(), conversationId, callerId: me.id, calleeId, kind, status: 'ringing', createdAt: nowIso(), simulated: true };
+  }
+
+  async updateCall() { /* sin servidor en modo demo */ }
+
+  callSignal() { return null; }
+
+  /** Simula una llamada entrante de un usuario de ejemplo (para probar la interfaz). */
+  async simulateIncomingCall(kind = 'video', botId = 'u-hype') {
+    const me = this._requireMe();
+    const conversationId = await this.openConversation(botId);
+    bus.emit('call:incoming', { id: uuid(), conversationId, callerId: botId, calleeId: me.id, kind, status: 'ringing', createdAt: nowIso(), simulated: true, other: this._profile(this.db.users[botId]) });
   }
 
   async markConversationRead(conversationId) {

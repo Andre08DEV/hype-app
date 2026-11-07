@@ -123,7 +123,7 @@ export async function render(el, ctx) {
     <div class="profile-banner" style="--a1:${a1};--a2:${a2}">${u.bannerUrl ? html`<img ${srcAttr(u.bannerUrl)} alt="">` : ''}</div>
     <div class="profile-head">
       <div class="top">${avatar(u, 'xxl')}<div class="row" style="gap:8px">
-        ${me ? html`<button class="btn btn-outline" data-edit>${icon('edit', { size: 16 })} Editar perfil</button>` : html`${state.user ? html`<button class="icon-btn" data-dm title="Mensaje" aria-label="Enviar mensaje" style="border:1px solid var(--border-strong)">${icon('mail', { size: 18 })}</button>` : ''}${followBtn(u, { size: 'md' })}`}
+        ${me ? html`<button class="btn btn-outline" data-edit>${icon('edit', { size: 16 })} Editar perfil</button>` : html`${state.user ? html`<button class="icon-btn" data-call-user title="Videollamada" aria-label="Videollamada" style="border:1px solid var(--border-strong)">${icon('video', { size: 18 })}</button><button class="icon-btn" data-dm title="Mensaje" aria-label="Enviar mensaje" style="border:1px solid var(--border-strong)">${icon('mail', { size: 18 })}</button>` : ''}${followBtn(u, { size: 'md' })}`}
       </div></div>
       <div><h1>${u.displayName}${verified(u)}</h1><div class="row" style="gap:8px"><span class="dim">@${u.username}</span>${u.followsYou ? html`<span class="follows-you">Te sigue</span>` : ''}</div></div>
       ${u.bio ? html`<div class="md">${renderMarkdown(u.bio, { compact: true })}</div>` : me ? html`<button class="btn btn-ghost btn-sm" data-edit style="align-self:flex-start">${icon('plus', { size: 14 })} Añade una bio</button>` : ''}
@@ -176,6 +176,14 @@ export async function render(el, ctx) {
     if (e.target.closest('[data-edit]')) { openEditProfile(); return; }
     const l = e.target.closest('[data-list]');
     if (l) { openFollowList(u, l.dataset.list); return; }
+    if (e.target.closest('[data-call-user]')) {
+      try {
+        const cid = await api.openConversation(u.id);
+        const { startCall } = await import('../calls/ui.js');
+        startCall(u, { conversationId: cid, kind: 'video' });
+      } catch (err) { toastError(err); }
+      return;
+    }
     if (e.target.closest('[data-dm]')) {
       try { const cid = await api.openConversation(u.id); navigate(`/mensajes/${cid}`); } catch (err) { toastError(err); }
     }

@@ -25,6 +25,7 @@ Funciona **sin instalar nada**: son archivos estáticos (HTML + CSS + módulos J
 | **Grupos** | Públicos o privados (con solicitudes que aprueba el admin), feed propio, miembros y publicación directa en el grupo. |
 | **Hype IA (Gemini)** | Chat con streaming e imágenes, ideas de posts, "¿Qué me perdí?". En el editor: mejorar, acortar, cambiar tono, traducir, hashtags, convertir en hilo y crear encuestas. También resume y explica posts, genera texto alternativo y sugiere respuestas. |
 | **Social** | Perfiles con portada, bio en Markdown, enlaces e intereses; seguidores; **mensajes privados** en tiempo real; notificaciones; explorar y buscar; tendencias. |
+| **Videollamadas** | Llamadas de vídeo y de voz 1 a 1 desde un chat o un perfil. Permiten silenciar el micrófono, apagar la cámara, cambiar de cámara en el móvil, compartir pantalla en el ordenador y minimizar la llamada para seguir navegando. Incluyen aviso de llamada entrante con tono y vibración, y registro de la llamada en el chat. En modo demo puedes llamar a los usuarios de ejemplo. |
 | **Ajustes avanzados** | Tema (oscuro, claro, AMOLED, sistema), 9 colores de acento + uno personalizado, tamaño de texto, esquinas, densidad, autoplay, ahorro de datos, filtros de contenido, privacidad de mensajes, notificaciones (incluidas las del navegador), modelo y personalidad de la IA, conexión a la nube, accesibilidad, exportar datos y modo desarrollador. |
 | **Extras** | Racha diaria 🔥 (conserva la de la versión anterior), atajos de teclado (`?` para verlos), PWA instalable y diseño adaptado a móvil y escritorio. |
 
@@ -97,6 +98,24 @@ Opcional: `supabase secrets set GEMINI_MODEL=gemini-3.8-flash AI_DAILY_LIMIT=100
 
 ---
 
+## 📹 Videollamadas
+
+Las llamadas usan **WebRTC**: el audio y el vídeo viajan directamente entre los dos navegadores, cifrados de extremo a extremo, y Supabase Realtime solo sirve para conectarlos. No hace falta otro servidor.
+
+1. Vuelve a ejecutar [`supabase/schema.sql`](supabase/schema.sql) en el SQL Editor. Es seguro: no borra datos, solo añade la tabla `calls` con sus políticas RLS y la activa en tiempo real.
+2. Llama desde un chat (iconos 📞 y 📹) o desde el botón 📹 del perfil de alguien.
+
+Cosas a tener en cuenta:
+
+- La otra persona tiene que tener Hype abierto (en cualquier pestaña) para recibir la llamada.
+- Solo puedes llamar a alguien con quien ya tienes un chat. Se respeta su ajuste de "¿Quién puede escribirte?".
+- En **Ajustes → Llamadas** puedes desactivar las llamadas entrantes, entrar con el micrófono o la cámara apagados y probar tu cámara y micrófono.
+- Para casi todas las conexiones bastan los servidores STUN públicos que ya vienen configurados. En redes muy restrictivas (algunas empresas o datos móviles con NAT estricto) puede hacer falta un servidor **TURN**: añádelo en `config.js` así:
+
+```js
+iceServers: [{ urls: 'turn:tu-servidor:3478', username: 'usuario', credential: 'clave' }],
+```
+
 ## 🎞️ GIFs
 
 Sin configurar nada tienes 8 GIFs integrados (originales de Hype). Para buscar en millones de GIFs, crea una key gratis en [developers.giphy.com](https://developers.giphy.com) y pégala en **Ajustes → Integraciones** o en `config.js` (`giphyApiKey`). La API de Tenor cerró en junio de 2026, por eso se usa GIPHY.
@@ -116,6 +135,7 @@ js/ai/gemini.js       Cliente de Gemini (streaming, tareas de IA)
 js/components/        Post, editor de posts/hilos, editor Markdown, medios, selectores
 js/views/             Feed, shorts, juegos, grupos, proyectos, perfil, ajustes…
 js/games/             Los 5 mini-juegos
+js/calls/             Videollamadas: WebRTC (core.js) e interfaz (ui.js)
 supabase/schema.sql   Base de datos completa con RLS
 supabase/reset.sql    Limpieza de esquemas antiguos (destructivo)
 supabase/functions/hype-ai/  Edge Function proxy de Gemini
